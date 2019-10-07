@@ -2684,269 +2684,7 @@ Engine.prototype.tick = function() {
     this.emit('tick', dt)
     this.last = time
 }
-},{"inherits":"../node_modules/inherits/inherits_browser.js","events":"../node_modules/node-libs-browser/node_modules/events/events.js","right-now":"../node_modules/right-now/browser.js","raf":"../node_modules/raf/index.js"}],"../node_modules/file-saver/dist/FileSaver.min.js":[function(require,module,exports) {
-var define;
-var global = arguments[3];
-(function(a,b){if("function"==typeof define&&define.amd)define([],b);else if("undefined"!=typeof exports)b();else{b(),a.FileSaver={exports:{}}.exports}})(this,function(){"use strict";function b(a,b){return"undefined"==typeof b?b={autoBom:!1}:"object"!=typeof b&&(console.warn("Deprecated: Expected third argument to be a object"),b={autoBom:!b}),b.autoBom&&/^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(a.type)?new Blob(["\uFEFF",a],{type:a.type}):a}function c(b,c,d){var e=new XMLHttpRequest;e.open("GET",b),e.responseType="blob",e.onload=function(){a(e.response,c,d)},e.onerror=function(){console.error("could not download file")},e.send()}function d(a){var b=new XMLHttpRequest;b.open("HEAD",a,!1);try{b.send()}catch(a){}return 200<=b.status&&299>=b.status}function e(a){try{a.dispatchEvent(new MouseEvent("click"))}catch(c){var b=document.createEvent("MouseEvents");b.initMouseEvent("click",!0,!0,window,0,0,0,80,20,!1,!1,!1,!1,0,null),a.dispatchEvent(b)}}var f="object"==typeof window&&window.window===window?window:"object"==typeof self&&self.self===self?self:"object"==typeof global&&global.global===global?global:void 0,a=f.saveAs||("object"!=typeof window||window!==f?function(){}:"download"in HTMLAnchorElement.prototype?function(b,g,h){var i=f.URL||f.webkitURL,j=document.createElement("a");g=g||b.name||"download",j.download=g,j.rel="noopener","string"==typeof b?(j.href=b,j.origin===location.origin?e(j):d(j.href)?c(b,g,h):e(j,j.target="_blank")):(j.href=i.createObjectURL(b),setTimeout(function(){i.revokeObjectURL(j.href)},4E4),setTimeout(function(){e(j)},0))}:"msSaveOrOpenBlob"in navigator?function(f,g,h){if(g=g||f.name||"download","string"!=typeof f)navigator.msSaveOrOpenBlob(b(f,h),g);else if(d(f))c(f,g,h);else{var i=document.createElement("a");i.href=f,i.target="_blank",setTimeout(function(){e(i)})}}:function(a,b,d,e){if(e=e||open("","_blank"),e&&(e.document.title=e.document.body.innerText="downloading..."),"string"==typeof a)return c(a,b,d);var g="application/octet-stream"===a.type,h=/constructor/i.test(f.HTMLElement)||f.safari,i=/CriOS\/[\d]+/.test(navigator.userAgent);if((i||g&&h)&&"object"==typeof FileReader){var j=new FileReader;j.onloadend=function(){var a=j.result;a=i?a:a.replace(/^data:[^;]*;/,"data:attachment/file;"),e?e.location.href=a:location=a,e=null},j.readAsDataURL(a)}else{var k=f.URL||f.webkitURL,l=k.createObjectURL(a);e?e.location=l:location.href=l,e=null,setTimeout(function(){k.revokeObjectURL(l)},4E4)}});f.saveAs=a.saveAs=a,"undefined"!=typeof module&&(module.exports=a)});
-
-
-},{}],"js/utils/engine.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var _rafLoop = _interopRequireDefault(require("raf-loop"));
-
-var _fileSaver = require("file-saver");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
-
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(source, true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(source).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
-
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
-
-var DEFAULTS = {
-  debug: false,
-  width: 480,
-  height: 480,
-  pixelRatio: window.devicePixelRatio,
-  clickToggleDebug: true,
-  pixelate: 1
-};
-
-var SketchEngine =
-/*#__PURE__*/
-function () {
-  function SketchEngine(canvasEl) {
-    var opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-    _classCallCheck(this, SketchEngine);
-
-    this.options = _objectSpread({}, DEFAULTS, {}, opts);
-    this.canvasEl = canvasEl;
-    this.canvasCtx = this.canvasEl.getContext('2d');
-    window.ctx = this.canvasCtx;
-    this.frame = 0;
-    this.loop = (0, _rafLoop.default)(this.update.bind(this));
-
-    this._renderer = function () {};
-
-    this._addEventListeners();
-
-    this.updateDimensions(this.options.width, this.options.height, this.options.pixelate, this.options.pixelRatio);
-  }
-
-  _createClass(SketchEngine, [{
-    key: "_addEventListeners",
-    value: function _addEventListeners() {
-      var _this = this;
-
-      this.canvasEl.addEventListener('click', function () {
-        _this.options.debug = !_this.options.debug;
-        document.body.classList.toggle('debug', _this.options.debug);
-      }, false);
-    }
-  }, {
-    key: "updateDimensions",
-    value: function updateDimensions(width, height, pixelate, pixelRatio) {
-      this.canvasEl.width = width * pixelRatio;
-      this.canvasEl.height = height * pixelRatio;
-      this.canvasEl.width = width * pixelRatio;
-      this.canvasEl.height = height * pixelRatio;
-      this.canvasEl.style.width = "".concat(width * pixelate, "px");
-      this.canvasEl.style.height = "".concat(height * pixelate, "px");
-      this.canvasCtx.scale(pixelRatio, pixelRatio);
-    }
-  }, {
-    key: "onRender",
-    value: function onRender() {
-      var fn = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-      this._renderer = fn;
-    }
-  }, {
-    key: "start",
-    value: function start() {
-      this.loop.start();
-    }
-  }, {
-    key: "update",
-    value: function update(dt) {
-      this._renderer({
-        debug: this.options.debug,
-        frame: this.frame,
-        deltaTime: dt,
-        width: this.options.width,
-        height: this.options.height
-      });
-
-      this.frame++;
-    }
-  }, {
-    key: "stop",
-    value: function stop() {
-      this.loop.stop();
-    }
-  }, {
-    key: "saveFrame",
-    value: function saveFrame() {
-      var _this2 = this;
-
-      var d = new Date();
-      var dStr = [d.getFullYear(), (d.getMonth() + 1).toString().padStart(2, '0'), d.getDate().toString().padStart(2, '0')].join('-');
-      this.canvasEl.toBlob(function (blob) {
-        (0, _fileSaver.saveAs)(blob, "".concat(dStr, "-").concat(_this2.frame, ".png"));
-      }, 'image/png');
-    }
-  }]);
-
-  return SketchEngine;
-}();
-
-var _default = SketchEngine;
-exports.default = _default;
-},{"raf-loop":"../node_modules/raf-loop/index.js","file-saver":"../node_modules/file-saver/dist/FileSaver.min.js"}],"js/utils/paths.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.getPointOnArc = exports.arcPath = exports.circlePath = exports.rectPath = exports.getPointOnLinePath = exports.linePath = exports.cubicBezierPath = exports.getPointOnCubicBezier = exports.quadraticBezierPath = exports.getPointOnQuadraticBezier = void 0;
-
-var getPointOnQuadraticBezier = function getPointOnQuadraticBezier(t, p0, p1, p2) {
-  var invT = 1 - t;
-  return {
-    x: invT * invT * p0.x + 2 * invT * t * p1.x + t * t * p2.x,
-    y: invT * invT * p0.y + 2 * invT * t * p1.y + t * t * p2.y
-  };
-};
-
-exports.getPointOnQuadraticBezier = getPointOnQuadraticBezier;
-
-var quadraticBezierPath = function quadraticBezierPath(p1, cp1, p2) {
-  var segments = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 50;
-  var angleSegment = 1 / segments;
-  var line = [];
-
-  for (var i = 0; i < segments; i++) {
-    var t = angleSegment * i;
-    line.push(getPointOnQuadraticBezier(t, p1, cp1, p2));
-  }
-
-  return line;
-};
-
-exports.quadraticBezierPath = quadraticBezierPath;
-
-var getPointOnCubicBezier = function getPointOnCubicBezier(t, p0, p1, p2, p3) {
-  return {
-    x: Math.pow(1 - t, 3) * p0.x + 3 * Math.pow(1 - t, 2) * t * p1.x + 3 * (1 - t) * Math.pow(t, 2) * p2.x + Math.pow(t, 3) * p3.x,
-    y: Math.pow(1 - t, 3) * p0.y + 3 * Math.pow(1 - t, 2) * t * p1.y + 3 * (1 - t) * Math.pow(t, 2) * p2.y + Math.pow(t, 3) * p3.y
-  };
-};
-
-exports.getPointOnCubicBezier = getPointOnCubicBezier;
-
-var cubicBezierPath = function cubicBezierPath(p1, cp1, cp2, p2) {
-  var segments = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 50;
-  var angleSegment = 1 / segments;
-  var line = [];
-
-  for (var i = 0; i < segments; i++) {
-    var t = angleSegment * i;
-    line.push(getPointOnCubicBezier(t, p1, cp1, cp2, p2));
-  }
-
-  return line;
-};
-
-exports.cubicBezierPath = cubicBezierPath;
-
-var linePath = function linePath(p1, p2) {
-  var segments = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 50;
-  var slice = 1 / segments;
-  var line = [];
-
-  for (var i = 0; i < segments; i++) {
-    var t = slice * i;
-    line.push(getPointOnLinePath(t, p1, p2));
-  }
-
-  return line;
-};
-
-exports.linePath = linePath;
-
-var getPointOnLinePath = function getPointOnLinePath(t, p1, p2) {
-  return {
-    x: p1.x + (p2.x - p1.x) * t,
-    y: p1.y + (p2.y - p1.y) * t
-  };
-};
-
-exports.getPointOnLinePath = getPointOnLinePath;
-
-var rectPath = function rectPath(tlx, tly, width, height) {
-  return [{
-    x: tlx,
-    y: tly
-  }, {
-    x: tlx + width,
-    y: tly
-  }, {
-    x: tlx + width,
-    y: tly + height
-  }, {
-    x: tlx,
-    y: tly + height
-  }];
-};
-
-exports.rectPath = rectPath;
-
-var circlePath = function circlePath(cx, cy, radius) {
-  var segments = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 50;
-  var startingAngle = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
-  return arcPath(cx, cy, radius, Math.PI * 2, segments, startingAngle);
-};
-
-exports.circlePath = circlePath;
-
-var arcPath = function arcPath(cx, cy, radius, angle) {
-  var segments = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 50;
-  var startingAngle = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 0;
-  var angleSegment = angle / segments;
-  var angleOffset = startingAngle;
-  var path = [];
-
-  for (var i = 0; i < segments; i++) {
-    path.push(getPointOnArc(cx, cy, angleOffset + angleSegment * i, radius));
-  }
-
-  return path;
-};
-
-exports.arcPath = arcPath;
-
-var getPointOnArc = function getPointOnArc(cx, cy, angle, radius) {
-  return {
-    x: cx + Math.cos(angle) * radius,
-    y: cy + Math.sin(angle) * radius
-  };
-};
-
-exports.getPointOnArc = getPointOnArc;
-},{}],"js/utils/utils.js":[function(require,module,exports) {
+},{"inherits":"../node_modules/inherits/inherits_browser.js","events":"../node_modules/node-libs-browser/node_modules/events/events.js","right-now":"../node_modules/right-now/browser.js","raf":"../node_modules/raf/index.js"}],"js/utils/utils.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -3109,6 +2847,342 @@ var loadImage = function loadImage(src) {
 };
 
 exports.loadImage = loadImage;
+},{}],"js/utils/baseEngine.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _rafLoop = _interopRequireDefault(require("raf-loop"));
+
+var _utils = require("./utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(source, true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(source).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+var BaseEngine =
+/*#__PURE__*/
+function () {
+  function BaseEngine(defaultOptions, options) {
+    _classCallCheck(this, BaseEngine);
+
+    this.options = _objectSpread({}, defaultOptions, {}, options);
+    this.loop = (0, _rafLoop.default)(this.update.bind(this));
+    this.frame = 0;
+    this.windowWidth = window.innerWidth;
+
+    this._renderer = function () {};
+  }
+
+  _createClass(BaseEngine, [{
+    key: "_addEventListeners",
+    value: function _addEventListeners() {
+      var _this = this;
+
+      this.wrapper.addEventListener('click', function () {
+        _this.options.debug = !_this.options.debug;
+        document.body.classList.toggle('debug', _this.options.debug);
+      }, false);
+      this.resizeTimer = setTimeout(function () {});
+      window.addEventListener('resize', function (e) {
+        clearTimeout(_this.resizeTimer);
+        _this.resizeTimer = setTimeout(function () {
+          _this.windowWidth = window.innerWidth;
+
+          _this.updateDimensions(_this.options.width, _this.options.height, _this.options.pixelRatio, _this.options.pixelate);
+        }, 150);
+      });
+    }
+  }, {
+    key: "_removeLoading",
+    value: function _removeLoading() {
+      var loading = document.getElementById('loading');
+      loading.parentElement.removeChild(loading);
+    }
+  }, {
+    key: "updateDimensions",
+    value: function updateDimensions(width, height, pixelRatio) {
+      var pixelate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
+      this.wrapper.style.width = "".concat(width * pixelate, "px");
+      this.wrapper.style.height = "".concat(height * pixelate, "px");
+      this.wrapper.style.transform = "scale(".concat((0, _utils.clamp)(this.windowWidth / width, 1), ")");
+
+      if (this.canvasEl) {
+        this.canvasEl.width = width * pixelRatio;
+        this.canvasEl.height = height * pixelRatio;
+        this.canvasCtx.scale(pixelRatio, pixelRatio);
+      }
+
+      if (this.renderer) {
+        this.renderer.setSize(width, height);
+        this.renderer.setPixelRatio(pixelRatio);
+      }
+    }
+  }, {
+    key: "onRender",
+    value: function onRender() {
+      var fn = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+      this._renderer = fn;
+    }
+  }, {
+    key: "preload",
+    value: function preload() {
+      var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+      return new Promise(function (resolve, reject) {
+        cb(resolve);
+      });
+    }
+  }, {
+    key: "start",
+    value: function start() {
+      this._addEventListeners();
+
+      this._removeLoading();
+
+      this.loop.start();
+    }
+  }, {
+    key: "stop",
+    value: function stop() {
+      this.loop.stop();
+    }
+  }]);
+
+  return BaseEngine;
+}();
+
+var _default = BaseEngine;
+exports.default = _default;
+},{"raf-loop":"../node_modules/raf-loop/index.js","./utils":"js/utils/utils.js"}],"js/utils/engine.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _baseEngine = _interopRequireDefault(require("./baseEngine"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+var DEFAULTS = {
+  debug: false,
+  width: 480,
+  height: 480,
+  pixelRatio: window.devicePixelRatio,
+  clickToggleDebug: true,
+  pixelate: 1
+};
+
+var SketchEngine =
+/*#__PURE__*/
+function (_BaseEngine) {
+  _inherits(SketchEngine, _BaseEngine);
+
+  function SketchEngine(canvasEl) {
+    var _this;
+
+    var opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+    _classCallCheck(this, SketchEngine);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(SketchEngine).call(this, DEFAULTS, opts));
+    _this.canvasEl = canvasEl;
+    _this.canvasCtx = _this.canvasEl.getContext('2d');
+    window.ctx = _this.canvasCtx;
+
+    _this.updateDimensions(_this.options.width, _this.options.height, _this.options.pixelRatio, _this.options.pixelate);
+
+    return _this;
+  }
+
+  _createClass(SketchEngine, [{
+    key: "update",
+    value: function update(dt) {
+      this._renderer({
+        debug: this.options.debug,
+        frame: this.frame,
+        deltaTime: dt,
+        width: this.options.width,
+        height: this.options.height
+      });
+
+      this.frame++;
+    }
+  }, {
+    key: "wrapper",
+    get: function get() {
+      return this.canvasEl;
+    }
+  }]);
+
+  return SketchEngine;
+}(_baseEngine.default);
+
+var _default = SketchEngine;
+exports.default = _default;
+},{"./baseEngine":"js/utils/baseEngine.js"}],"js/utils/paths.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.getPointOnArc = exports.arcPath = exports.circlePath = exports.rectPath = exports.getPointOnLinePath = exports.linePath = exports.cubicBezierPath = exports.getPointOnCubicBezier = exports.quadraticBezierPath = exports.getPointOnQuadraticBezier = void 0;
+
+var getPointOnQuadraticBezier = function getPointOnQuadraticBezier(t, p0, p1, p2) {
+  var invT = 1 - t;
+  return {
+    x: invT * invT * p0.x + 2 * invT * t * p1.x + t * t * p2.x,
+    y: invT * invT * p0.y + 2 * invT * t * p1.y + t * t * p2.y
+  };
+};
+
+exports.getPointOnQuadraticBezier = getPointOnQuadraticBezier;
+
+var quadraticBezierPath = function quadraticBezierPath(p1, cp1, p2) {
+  var segments = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 50;
+  var angleSegment = 1 / segments;
+  var line = [];
+
+  for (var i = 0; i < segments; i++) {
+    var t = angleSegment * i;
+    line.push(getPointOnQuadraticBezier(t, p1, cp1, p2));
+  }
+
+  return line;
+};
+
+exports.quadraticBezierPath = quadraticBezierPath;
+
+var getPointOnCubicBezier = function getPointOnCubicBezier(t, p0, p1, p2, p3) {
+  return {
+    x: Math.pow(1 - t, 3) * p0.x + 3 * Math.pow(1 - t, 2) * t * p1.x + 3 * (1 - t) * Math.pow(t, 2) * p2.x + Math.pow(t, 3) * p3.x,
+    y: Math.pow(1 - t, 3) * p0.y + 3 * Math.pow(1 - t, 2) * t * p1.y + 3 * (1 - t) * Math.pow(t, 2) * p2.y + Math.pow(t, 3) * p3.y
+  };
+};
+
+exports.getPointOnCubicBezier = getPointOnCubicBezier;
+
+var cubicBezierPath = function cubicBezierPath(p1, cp1, cp2, p2) {
+  var segments = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 50;
+  var angleSegment = 1 / segments;
+  var line = [];
+
+  for (var i = 0; i < segments; i++) {
+    var t = angleSegment * i;
+    line.push(getPointOnCubicBezier(t, p1, cp1, cp2, p2));
+  }
+
+  return line;
+};
+
+exports.cubicBezierPath = cubicBezierPath;
+
+var linePath = function linePath(p1, p2) {
+  var segments = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 50;
+  var slice = 1 / segments;
+  var line = [];
+
+  for (var i = 0; i < segments; i++) {
+    var t = slice * i;
+    line.push(getPointOnLinePath(t, p1, p2));
+  }
+
+  return line;
+};
+
+exports.linePath = linePath;
+
+var getPointOnLinePath = function getPointOnLinePath(t, p1, p2) {
+  return {
+    x: p1.x + (p2.x - p1.x) * t,
+    y: p1.y + (p2.y - p1.y) * t
+  };
+};
+
+exports.getPointOnLinePath = getPointOnLinePath;
+
+var rectPath = function rectPath(tlx, tly, width, height) {
+  return [{
+    x: tlx,
+    y: tly
+  }, {
+    x: tlx + width,
+    y: tly
+  }, {
+    x: tlx + width,
+    y: tly + height
+  }, {
+    x: tlx,
+    y: tly + height
+  }];
+};
+
+exports.rectPath = rectPath;
+
+var circlePath = function circlePath(cx, cy, radius) {
+  var segments = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 50;
+  var startingAngle = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
+  return arcPath(cx, cy, radius, Math.PI * 2, segments, startingAngle);
+};
+
+exports.circlePath = circlePath;
+
+var arcPath = function arcPath(cx, cy, radius, angle) {
+  var segments = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 50;
+  var startingAngle = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 0;
+  var angleSegment = angle / segments;
+  var angleOffset = startingAngle;
+  var path = [];
+
+  for (var i = 0; i < segments; i++) {
+    path.push(getPointOnArc(cx, cy, angleOffset + angleSegment * i, radius));
+  }
+
+  return path;
+};
+
+exports.arcPath = arcPath;
+
+var getPointOnArc = function getPointOnArc(cx, cy, angle, radius) {
+  return {
+    x: cx + Math.cos(angle) * radius,
+    y: cy + Math.sin(angle) * radius
+  };
+};
+
+exports.getPointOnArc = getPointOnArc;
 },{}],"images/crayon.jpg":[function(require,module,exports) {
 module.exports = "/crayon.fde431a4.jpg";
 },{}],"js/script.js":[function(require,module,exports) {
@@ -3300,7 +3374,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60166" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "64111" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
