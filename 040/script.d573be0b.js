@@ -117,835 +117,7 @@ parcelRequire = (function (modules, cache, entry, globalName) {
   }
 
   return newRequire;
-})({"../node_modules/inherits/inherits_browser.js":[function(require,module,exports) {
-if (typeof Object.create === 'function') {
-  // implementation from standard node.js 'util' module
-  module.exports = function inherits(ctor, superCtor) {
-    if (superCtor) {
-      ctor.super_ = superCtor
-      ctor.prototype = Object.create(superCtor.prototype, {
-        constructor: {
-          value: ctor,
-          enumerable: false,
-          writable: true,
-          configurable: true
-        }
-      })
-    }
-  };
-} else {
-  // old school shim for old browsers
-  module.exports = function inherits(ctor, superCtor) {
-    if (superCtor) {
-      ctor.super_ = superCtor
-      var TempCtor = function () {}
-      TempCtor.prototype = superCtor.prototype
-      ctor.prototype = new TempCtor()
-      ctor.prototype.constructor = ctor
-    }
-  }
-}
-
-},{}],"../node_modules/node-libs-browser/node_modules/events/events.js":[function(require,module,exports) {
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-'use strict';
-
-var R = typeof Reflect === 'object' ? Reflect : null;
-var ReflectApply = R && typeof R.apply === 'function' ? R.apply : function ReflectApply(target, receiver, args) {
-  return Function.prototype.apply.call(target, receiver, args);
-};
-var ReflectOwnKeys;
-
-if (R && typeof R.ownKeys === 'function') {
-  ReflectOwnKeys = R.ownKeys;
-} else if (Object.getOwnPropertySymbols) {
-  ReflectOwnKeys = function ReflectOwnKeys(target) {
-    return Object.getOwnPropertyNames(target).concat(Object.getOwnPropertySymbols(target));
-  };
-} else {
-  ReflectOwnKeys = function ReflectOwnKeys(target) {
-    return Object.getOwnPropertyNames(target);
-  };
-}
-
-function ProcessEmitWarning(warning) {
-  if (console && console.warn) console.warn(warning);
-}
-
-var NumberIsNaN = Number.isNaN || function NumberIsNaN(value) {
-  return value !== value;
-};
-
-function EventEmitter() {
-  EventEmitter.init.call(this);
-}
-
-module.exports = EventEmitter; // Backwards-compat with node 0.10.x
-
-EventEmitter.EventEmitter = EventEmitter;
-EventEmitter.prototype._events = undefined;
-EventEmitter.prototype._eventsCount = 0;
-EventEmitter.prototype._maxListeners = undefined; // By default EventEmitters will print a warning if more than 10 listeners are
-// added to it. This is a useful default which helps finding memory leaks.
-
-var defaultMaxListeners = 10;
-Object.defineProperty(EventEmitter, 'defaultMaxListeners', {
-  enumerable: true,
-  get: function () {
-    return defaultMaxListeners;
-  },
-  set: function (arg) {
-    if (typeof arg !== 'number' || arg < 0 || NumberIsNaN(arg)) {
-      throw new RangeError('The value of "defaultMaxListeners" is out of range. It must be a non-negative number. Received ' + arg + '.');
-    }
-
-    defaultMaxListeners = arg;
-  }
-});
-
-EventEmitter.init = function () {
-  if (this._events === undefined || this._events === Object.getPrototypeOf(this)._events) {
-    this._events = Object.create(null);
-    this._eventsCount = 0;
-  }
-
-  this._maxListeners = this._maxListeners || undefined;
-}; // Obviously not all Emitters should be limited to 10. This function allows
-// that to be increased. Set to zero for unlimited.
-
-
-EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
-  if (typeof n !== 'number' || n < 0 || NumberIsNaN(n)) {
-    throw new RangeError('The value of "n" is out of range. It must be a non-negative number. Received ' + n + '.');
-  }
-
-  this._maxListeners = n;
-  return this;
-};
-
-function $getMaxListeners(that) {
-  if (that._maxListeners === undefined) return EventEmitter.defaultMaxListeners;
-  return that._maxListeners;
-}
-
-EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
-  return $getMaxListeners(this);
-};
-
-EventEmitter.prototype.emit = function emit(type) {
-  var args = [];
-
-  for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
-
-  var doError = type === 'error';
-  var events = this._events;
-  if (events !== undefined) doError = doError && events.error === undefined;else if (!doError) return false; // If there is no 'error' event listener then throw.
-
-  if (doError) {
-    var er;
-    if (args.length > 0) er = args[0];
-
-    if (er instanceof Error) {
-      // Note: The comments on the `throw` lines are intentional, they show
-      // up in Node's output if this results in an unhandled exception.
-      throw er; // Unhandled 'error' event
-    } // At least give some kind of context to the user
-
-
-    var err = new Error('Unhandled error.' + (er ? ' (' + er.message + ')' : ''));
-    err.context = er;
-    throw err; // Unhandled 'error' event
-  }
-
-  var handler = events[type];
-  if (handler === undefined) return false;
-
-  if (typeof handler === 'function') {
-    ReflectApply(handler, this, args);
-  } else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-
-    for (var i = 0; i < len; ++i) ReflectApply(listeners[i], this, args);
-  }
-
-  return true;
-};
-
-function _addListener(target, type, listener, prepend) {
-  var m;
-  var events;
-  var existing;
-
-  if (typeof listener !== 'function') {
-    throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
-  }
-
-  events = target._events;
-
-  if (events === undefined) {
-    events = target._events = Object.create(null);
-    target._eventsCount = 0;
-  } else {
-    // To avoid recursion in the case that type === "newListener"! Before
-    // adding it to the listeners, first emit "newListener".
-    if (events.newListener !== undefined) {
-      target.emit('newListener', type, listener.listener ? listener.listener : listener); // Re-assign `events` because a newListener handler could have caused the
-      // this._events to be assigned to a new object
-
-      events = target._events;
-    }
-
-    existing = events[type];
-  }
-
-  if (existing === undefined) {
-    // Optimize the case of one listener. Don't need the extra array object.
-    existing = events[type] = listener;
-    ++target._eventsCount;
-  } else {
-    if (typeof existing === 'function') {
-      // Adding the second element, need to change to array.
-      existing = events[type] = prepend ? [listener, existing] : [existing, listener]; // If we've already got an array, just append.
-    } else if (prepend) {
-      existing.unshift(listener);
-    } else {
-      existing.push(listener);
-    } // Check for listener leak
-
-
-    m = $getMaxListeners(target);
-
-    if (m > 0 && existing.length > m && !existing.warned) {
-      existing.warned = true; // No error code for this since it is a Warning
-      // eslint-disable-next-line no-restricted-syntax
-
-      var w = new Error('Possible EventEmitter memory leak detected. ' + existing.length + ' ' + String(type) + ' listeners ' + 'added. Use emitter.setMaxListeners() to ' + 'increase limit');
-      w.name = 'MaxListenersExceededWarning';
-      w.emitter = target;
-      w.type = type;
-      w.count = existing.length;
-      ProcessEmitWarning(w);
-    }
-  }
-
-  return target;
-}
-
-EventEmitter.prototype.addListener = function addListener(type, listener) {
-  return _addListener(this, type, listener, false);
-};
-
-EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-
-EventEmitter.prototype.prependListener = function prependListener(type, listener) {
-  return _addListener(this, type, listener, true);
-};
-
-function onceWrapper() {
-  var args = [];
-
-  for (var i = 0; i < arguments.length; i++) args.push(arguments[i]);
-
-  if (!this.fired) {
-    this.target.removeListener(this.type, this.wrapFn);
-    this.fired = true;
-    ReflectApply(this.listener, this.target, args);
-  }
-}
-
-function _onceWrap(target, type, listener) {
-  var state = {
-    fired: false,
-    wrapFn: undefined,
-    target: target,
-    type: type,
-    listener: listener
-  };
-  var wrapped = onceWrapper.bind(state);
-  wrapped.listener = listener;
-  state.wrapFn = wrapped;
-  return wrapped;
-}
-
-EventEmitter.prototype.once = function once(type, listener) {
-  if (typeof listener !== 'function') {
-    throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
-  }
-
-  this.on(type, _onceWrap(this, type, listener));
-  return this;
-};
-
-EventEmitter.prototype.prependOnceListener = function prependOnceListener(type, listener) {
-  if (typeof listener !== 'function') {
-    throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
-  }
-
-  this.prependListener(type, _onceWrap(this, type, listener));
-  return this;
-}; // Emits a 'removeListener' event if and only if the listener was removed.
-
-
-EventEmitter.prototype.removeListener = function removeListener(type, listener) {
-  var list, events, position, i, originalListener;
-
-  if (typeof listener !== 'function') {
-    throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
-  }
-
-  events = this._events;
-  if (events === undefined) return this;
-  list = events[type];
-  if (list === undefined) return this;
-
-  if (list === listener || list.listener === listener) {
-    if (--this._eventsCount === 0) this._events = Object.create(null);else {
-      delete events[type];
-      if (events.removeListener) this.emit('removeListener', type, list.listener || listener);
-    }
-  } else if (typeof list !== 'function') {
-    position = -1;
-
-    for (i = list.length - 1; i >= 0; i--) {
-      if (list[i] === listener || list[i].listener === listener) {
-        originalListener = list[i].listener;
-        position = i;
-        break;
-      }
-    }
-
-    if (position < 0) return this;
-    if (position === 0) list.shift();else {
-      spliceOne(list, position);
-    }
-    if (list.length === 1) events[type] = list[0];
-    if (events.removeListener !== undefined) this.emit('removeListener', type, originalListener || listener);
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
-
-EventEmitter.prototype.removeAllListeners = function removeAllListeners(type) {
-  var listeners, events, i;
-  events = this._events;
-  if (events === undefined) return this; // not listening for removeListener, no need to emit
-
-  if (events.removeListener === undefined) {
-    if (arguments.length === 0) {
-      this._events = Object.create(null);
-      this._eventsCount = 0;
-    } else if (events[type] !== undefined) {
-      if (--this._eventsCount === 0) this._events = Object.create(null);else delete events[type];
-    }
-
-    return this;
-  } // emit removeListener for all listeners on all events
-
-
-  if (arguments.length === 0) {
-    var keys = Object.keys(events);
-    var key;
-
-    for (i = 0; i < keys.length; ++i) {
-      key = keys[i];
-      if (key === 'removeListener') continue;
-      this.removeAllListeners(key);
-    }
-
-    this.removeAllListeners('removeListener');
-    this._events = Object.create(null);
-    this._eventsCount = 0;
-    return this;
-  }
-
-  listeners = events[type];
-
-  if (typeof listeners === 'function') {
-    this.removeListener(type, listeners);
-  } else if (listeners !== undefined) {
-    // LIFO order
-    for (i = listeners.length - 1; i >= 0; i--) {
-      this.removeListener(type, listeners[i]);
-    }
-  }
-
-  return this;
-};
-
-function _listeners(target, type, unwrap) {
-  var events = target._events;
-  if (events === undefined) return [];
-  var evlistener = events[type];
-  if (evlistener === undefined) return [];
-  if (typeof evlistener === 'function') return unwrap ? [evlistener.listener || evlistener] : [evlistener];
-  return unwrap ? unwrapListeners(evlistener) : arrayClone(evlistener, evlistener.length);
-}
-
-EventEmitter.prototype.listeners = function listeners(type) {
-  return _listeners(this, type, true);
-};
-
-EventEmitter.prototype.rawListeners = function rawListeners(type) {
-  return _listeners(this, type, false);
-};
-
-EventEmitter.listenerCount = function (emitter, type) {
-  if (typeof emitter.listenerCount === 'function') {
-    return emitter.listenerCount(type);
-  } else {
-    return listenerCount.call(emitter, type);
-  }
-};
-
-EventEmitter.prototype.listenerCount = listenerCount;
-
-function listenerCount(type) {
-  var events = this._events;
-
-  if (events !== undefined) {
-    var evlistener = events[type];
-
-    if (typeof evlistener === 'function') {
-      return 1;
-    } else if (evlistener !== undefined) {
-      return evlistener.length;
-    }
-  }
-
-  return 0;
-}
-
-EventEmitter.prototype.eventNames = function eventNames() {
-  return this._eventsCount > 0 ? ReflectOwnKeys(this._events) : [];
-};
-
-function arrayClone(arr, n) {
-  var copy = new Array(n);
-
-  for (var i = 0; i < n; ++i) copy[i] = arr[i];
-
-  return copy;
-}
-
-function spliceOne(list, index) {
-  for (; index + 1 < list.length; index++) list[index] = list[index + 1];
-
-  list.pop();
-}
-
-function unwrapListeners(arr) {
-  var ret = new Array(arr.length);
-
-  for (var i = 0; i < ret.length; ++i) {
-    ret[i] = arr[i].listener || arr[i];
-  }
-
-  return ret;
-}
-},{}],"../node_modules/right-now/browser.js":[function(require,module,exports) {
-var global = arguments[3];
-module.exports =
-  global.performance &&
-  global.performance.now ? function now() {
-    return performance.now()
-  } : Date.now || function now() {
-    return +new Date
-  }
-
-},{}],"../node_modules/process/browser.js":[function(require,module,exports) {
-
-// shim for using process in browser
-var process = module.exports = {}; // cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
-
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-function defaultSetTimout() {
-  throw new Error('setTimeout has not been defined');
-}
-
-function defaultClearTimeout() {
-  throw new Error('clearTimeout has not been defined');
-}
-
-(function () {
-  try {
-    if (typeof setTimeout === 'function') {
-      cachedSetTimeout = setTimeout;
-    } else {
-      cachedSetTimeout = defaultSetTimout;
-    }
-  } catch (e) {
-    cachedSetTimeout = defaultSetTimout;
-  }
-
-  try {
-    if (typeof clearTimeout === 'function') {
-      cachedClearTimeout = clearTimeout;
-    } else {
-      cachedClearTimeout = defaultClearTimeout;
-    }
-  } catch (e) {
-    cachedClearTimeout = defaultClearTimeout;
-  }
-})();
-
-function runTimeout(fun) {
-  if (cachedSetTimeout === setTimeout) {
-    //normal enviroments in sane situations
-    return setTimeout(fun, 0);
-  } // if setTimeout wasn't available but was latter defined
-
-
-  if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-    cachedSetTimeout = setTimeout;
-    return setTimeout(fun, 0);
-  }
-
-  try {
-    // when when somebody has screwed with setTimeout but no I.E. maddness
-    return cachedSetTimeout(fun, 0);
-  } catch (e) {
-    try {
-      // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-      return cachedSetTimeout.call(null, fun, 0);
-    } catch (e) {
-      // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-      return cachedSetTimeout.call(this, fun, 0);
-    }
-  }
-}
-
-function runClearTimeout(marker) {
-  if (cachedClearTimeout === clearTimeout) {
-    //normal enviroments in sane situations
-    return clearTimeout(marker);
-  } // if clearTimeout wasn't available but was latter defined
-
-
-  if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-    cachedClearTimeout = clearTimeout;
-    return clearTimeout(marker);
-  }
-
-  try {
-    // when when somebody has screwed with setTimeout but no I.E. maddness
-    return cachedClearTimeout(marker);
-  } catch (e) {
-    try {
-      // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-      return cachedClearTimeout.call(null, marker);
-    } catch (e) {
-      // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-      // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-      return cachedClearTimeout.call(this, marker);
-    }
-  }
-}
-
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-  if (!draining || !currentQueue) {
-    return;
-  }
-
-  draining = false;
-
-  if (currentQueue.length) {
-    queue = currentQueue.concat(queue);
-  } else {
-    queueIndex = -1;
-  }
-
-  if (queue.length) {
-    drainQueue();
-  }
-}
-
-function drainQueue() {
-  if (draining) {
-    return;
-  }
-
-  var timeout = runTimeout(cleanUpNextTick);
-  draining = true;
-  var len = queue.length;
-
-  while (len) {
-    currentQueue = queue;
-    queue = [];
-
-    while (++queueIndex < len) {
-      if (currentQueue) {
-        currentQueue[queueIndex].run();
-      }
-    }
-
-    queueIndex = -1;
-    len = queue.length;
-  }
-
-  currentQueue = null;
-  draining = false;
-  runClearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-  var args = new Array(arguments.length - 1);
-
-  if (arguments.length > 1) {
-    for (var i = 1; i < arguments.length; i++) {
-      args[i - 1] = arguments[i];
-    }
-  }
-
-  queue.push(new Item(fun, args));
-
-  if (queue.length === 1 && !draining) {
-    runTimeout(drainQueue);
-  }
-}; // v8 likes predictible objects
-
-
-function Item(fun, array) {
-  this.fun = fun;
-  this.array = array;
-}
-
-Item.prototype.run = function () {
-  this.fun.apply(null, this.array);
-};
-
-process.title = 'browser';
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) {
-  return [];
-};
-
-process.binding = function (name) {
-  throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () {
-  return '/';
-};
-
-process.chdir = function (dir) {
-  throw new Error('process.chdir is not supported');
-};
-
-process.umask = function () {
-  return 0;
-};
-},{}],"../node_modules/performance-now/lib/performance-now.js":[function(require,module,exports) {
-var process = require("process");
-// Generated by CoffeeScript 1.12.2
-(function() {
-  var getNanoSeconds, hrtime, loadTime, moduleLoadTime, nodeLoadTime, upTime;
-
-  if ((typeof performance !== "undefined" && performance !== null) && performance.now) {
-    module.exports = function() {
-      return performance.now();
-    };
-  } else if ((typeof process !== "undefined" && process !== null) && process.hrtime) {
-    module.exports = function() {
-      return (getNanoSeconds() - nodeLoadTime) / 1e6;
-    };
-    hrtime = process.hrtime;
-    getNanoSeconds = function() {
-      var hr;
-      hr = hrtime();
-      return hr[0] * 1e9 + hr[1];
-    };
-    moduleLoadTime = getNanoSeconds();
-    upTime = process.uptime() * 1e9;
-    nodeLoadTime = moduleLoadTime - upTime;
-  } else if (Date.now) {
-    module.exports = function() {
-      return Date.now() - loadTime;
-    };
-    loadTime = Date.now();
-  } else {
-    module.exports = function() {
-      return new Date().getTime() - loadTime;
-    };
-    loadTime = new Date().getTime();
-  }
-
-}).call(this);
-
-
-
-},{"process":"../node_modules/process/browser.js"}],"../node_modules/raf/index.js":[function(require,module,exports) {
-var global = arguments[3];
-var now = require('performance-now')
-  , root = typeof window === 'undefined' ? global : window
-  , vendors = ['moz', 'webkit']
-  , suffix = 'AnimationFrame'
-  , raf = root['request' + suffix]
-  , caf = root['cancel' + suffix] || root['cancelRequest' + suffix]
-
-for(var i = 0; !raf && i < vendors.length; i++) {
-  raf = root[vendors[i] + 'Request' + suffix]
-  caf = root[vendors[i] + 'Cancel' + suffix]
-      || root[vendors[i] + 'CancelRequest' + suffix]
-}
-
-// Some versions of FF have rAF but not cAF
-if(!raf || !caf) {
-  var last = 0
-    , id = 0
-    , queue = []
-    , frameDuration = 1000 / 60
-
-  raf = function(callback) {
-    if(queue.length === 0) {
-      var _now = now()
-        , next = Math.max(0, frameDuration - (_now - last))
-      last = next + _now
-      setTimeout(function() {
-        var cp = queue.slice(0)
-        // Clear queue here to prevent
-        // callbacks from appending listeners
-        // to the current frame's queue
-        queue.length = 0
-        for(var i = 0; i < cp.length; i++) {
-          if(!cp[i].cancelled) {
-            try{
-              cp[i].callback(last)
-            } catch(e) {
-              setTimeout(function() { throw e }, 0)
-            }
-          }
-        }
-      }, Math.round(next))
-    }
-    queue.push({
-      handle: ++id,
-      callback: callback,
-      cancelled: false
-    })
-    return id
-  }
-
-  caf = function(handle) {
-    for(var i = 0; i < queue.length; i++) {
-      if(queue[i].handle === handle) {
-        queue[i].cancelled = true
-      }
-    }
-  }
-}
-
-module.exports = function(fn) {
-  // Wrap in a new function to prevent
-  // `cancel` potentially being assigned
-  // to the native rAF function
-  return raf.call(root, fn)
-}
-module.exports.cancel = function() {
-  caf.apply(root, arguments)
-}
-module.exports.polyfill = function(object) {
-  if (!object) {
-    object = root;
-  }
-  object.requestAnimationFrame = raf
-  object.cancelAnimationFrame = caf
-}
-
-},{"performance-now":"../node_modules/performance-now/lib/performance-now.js"}],"../node_modules/raf-loop/index.js":[function(require,module,exports) {
-var inherits = require('inherits')
-var EventEmitter = require('events').EventEmitter
-var now = require('right-now')
-var raf = require('raf')
-
-module.exports = Engine
-function Engine(fn) {
-    if (!(this instanceof Engine)) 
-        return new Engine(fn)
-    this.running = false
-    this.last = now()
-    this._frame = 0
-    this._tick = this.tick.bind(this)
-
-    if (fn)
-        this.on('tick', fn)
-}
-
-inherits(Engine, EventEmitter)
-
-Engine.prototype.start = function() {
-    if (this.running) 
-        return
-    this.running = true
-    this.last = now()
-    this._frame = raf(this._tick)
-    return this
-}
-
-Engine.prototype.stop = function() {
-    this.running = false
-    if (this._frame !== 0)
-        raf.cancel(this._frame)
-    this._frame = 0
-    return this
-}
-
-Engine.prototype.tick = function() {
-    this._frame = raf(this._tick)
-    var time = now()
-    var dt = time - this.last
-    this.emit('tick', dt)
-    this.last = time
-}
-},{"inherits":"../node_modules/inherits/inherits_browser.js","events":"../node_modules/node-libs-browser/node_modules/events/events.js","right-now":"../node_modules/right-now/browser.js","raf":"../node_modules/raf/index.js"}],"../node_modules/three/build/three.module.js":[function(require,module,exports) {
+})({"../node_modules/three/build/three.module.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -35647,7 +34819,1756 @@ var MapControls = function (object, domElement) {
 exports.MapControls = MapControls;
 MapControls.prototype = Object.create(_threeModule.EventDispatcher.prototype);
 MapControls.prototype.constructor = MapControls;
-},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js"}],"js/utils/engine3d.js":[function(require,module,exports) {
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js"}],"../node_modules/three/examples/jsm/shaders/CopyShader.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.CopyShader = void 0;
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ *
+ * Full-screen textured quad shader
+ */
+var CopyShader = {
+  uniforms: {
+    "tDiffuse": {
+      value: null
+    },
+    "opacity": {
+      value: 1.0
+    }
+  },
+  vertexShader: ["varying vec2 vUv;", "void main() {", "vUv = uv;", "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );", "}"].join("\n"),
+  fragmentShader: ["uniform float opacity;", "uniform sampler2D tDiffuse;", "varying vec2 vUv;", "void main() {", "vec4 texel = texture2D( tDiffuse, vUv );", "gl_FragColor = opacity * texel;", "}"].join("\n")
+};
+exports.CopyShader = CopyShader;
+},{}],"../node_modules/three/examples/jsm/postprocessing/Pass.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Pass = Pass;
+
+var _threeModule = require("../../../build/three.module.js");
+
+function Pass() {
+  // if set to true, the pass is processed by the composer
+  this.enabled = true; // if set to true, the pass indicates to swap read and write buffer after rendering
+
+  this.needsSwap = true; // if set to true, the pass clears its buffer before rendering
+
+  this.clear = false; // if set to true, the result of the pass is rendered to screen. This is set automatically by EffectComposer.
+
+  this.renderToScreen = false;
+}
+
+Object.assign(Pass.prototype, {
+  setSize: function ()
+  /* width, height */
+  {},
+  render: function ()
+  /* renderer, writeBuffer, readBuffer, deltaTime, maskActive */
+  {
+    console.error('THREE.Pass: .render() must be implemented in derived pass.');
+  }
+}); // Helper for passes that need to fill the viewport with a single quad.
+
+Pass.FullScreenQuad = function () {
+  var camera = new _threeModule.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  var geometry = new _threeModule.PlaneBufferGeometry(2, 2);
+
+  var FullScreenQuad = function (material) {
+    this._mesh = new _threeModule.Mesh(geometry, material);
+  };
+
+  Object.defineProperty(FullScreenQuad.prototype, 'material', {
+    get: function () {
+      return this._mesh.material;
+    },
+    set: function (value) {
+      this._mesh.material = value;
+    }
+  });
+  Object.assign(FullScreenQuad.prototype, {
+    render: function (renderer) {
+      renderer.render(this._mesh, camera);
+    }
+  });
+  return FullScreenQuad;
+}();
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js"}],"../node_modules/three/examples/jsm/postprocessing/ShaderPass.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.ShaderPass = void 0;
+
+var _threeModule = require("../../../build/three.module.js");
+
+var _Pass = require("../postprocessing/Pass.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ */
+var ShaderPass = function (shader, textureID) {
+  _Pass.Pass.call(this);
+
+  this.textureID = textureID !== undefined ? textureID : "tDiffuse";
+
+  if (shader instanceof _threeModule.ShaderMaterial) {
+    this.uniforms = shader.uniforms;
+    this.material = shader;
+  } else if (shader) {
+    this.uniforms = _threeModule.UniformsUtils.clone(shader.uniforms);
+    this.material = new _threeModule.ShaderMaterial({
+      defines: Object.assign({}, shader.defines),
+      uniforms: this.uniforms,
+      vertexShader: shader.vertexShader,
+      fragmentShader: shader.fragmentShader
+    });
+  }
+
+  this.fsQuad = new _Pass.Pass.FullScreenQuad(this.material);
+};
+
+exports.ShaderPass = ShaderPass;
+ShaderPass.prototype = Object.assign(Object.create(_Pass.Pass.prototype), {
+  constructor: ShaderPass,
+  render: function (renderer, writeBuffer, readBuffer
+  /*, deltaTime, maskActive */
+  ) {
+    if (this.uniforms[this.textureID]) {
+      this.uniforms[this.textureID].value = readBuffer.texture;
+    }
+
+    this.fsQuad.material = this.material;
+
+    if (this.renderToScreen) {
+      renderer.setRenderTarget(null);
+      this.fsQuad.render(renderer);
+    } else {
+      renderer.setRenderTarget(writeBuffer); // TODO: Avoid using autoClear properties, see https://github.com/mrdoob/three.js/pull/15571#issuecomment-465669600
+
+      if (this.clear) renderer.clear(renderer.autoClearColor, renderer.autoClearDepth, renderer.autoClearStencil);
+      this.fsQuad.render(renderer);
+    }
+  }
+});
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js","../postprocessing/Pass.js":"../node_modules/three/examples/jsm/postprocessing/Pass.js"}],"../node_modules/three/examples/jsm/postprocessing/MaskPass.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.ClearMaskPass = exports.MaskPass = void 0;
+
+var _Pass = require("../postprocessing/Pass.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ */
+var MaskPass = function (scene, camera) {
+  _Pass.Pass.call(this);
+
+  this.scene = scene;
+  this.camera = camera;
+  this.clear = true;
+  this.needsSwap = false;
+  this.inverse = false;
+};
+
+exports.MaskPass = MaskPass;
+MaskPass.prototype = Object.assign(Object.create(_Pass.Pass.prototype), {
+  constructor: MaskPass,
+  render: function (renderer, writeBuffer, readBuffer
+  /*, deltaTime, maskActive */
+  ) {
+    var context = renderer.getContext();
+    var state = renderer.state; // don't update color or depth
+
+    state.buffers.color.setMask(false);
+    state.buffers.depth.setMask(false); // lock buffers
+
+    state.buffers.color.setLocked(true);
+    state.buffers.depth.setLocked(true); // set up stencil
+
+    var writeValue, clearValue;
+
+    if (this.inverse) {
+      writeValue = 0;
+      clearValue = 1;
+    } else {
+      writeValue = 1;
+      clearValue = 0;
+    }
+
+    state.buffers.stencil.setTest(true);
+    state.buffers.stencil.setOp(context.REPLACE, context.REPLACE, context.REPLACE);
+    state.buffers.stencil.setFunc(context.ALWAYS, writeValue, 0xffffffff);
+    state.buffers.stencil.setClear(clearValue);
+    state.buffers.stencil.setLocked(true); // draw into the stencil buffer
+
+    renderer.setRenderTarget(readBuffer);
+    if (this.clear) renderer.clear();
+    renderer.render(this.scene, this.camera);
+    renderer.setRenderTarget(writeBuffer);
+    if (this.clear) renderer.clear();
+    renderer.render(this.scene, this.camera); // unlock color and depth buffer for subsequent rendering
+
+    state.buffers.color.setLocked(false);
+    state.buffers.depth.setLocked(false); // only render where stencil is set to 1
+
+    state.buffers.stencil.setLocked(false);
+    state.buffers.stencil.setFunc(context.EQUAL, 1, 0xffffffff); // draw if == 1
+
+    state.buffers.stencil.setOp(context.KEEP, context.KEEP, context.KEEP);
+    state.buffers.stencil.setLocked(true);
+  }
+});
+
+var ClearMaskPass = function () {
+  _Pass.Pass.call(this);
+
+  this.needsSwap = false;
+};
+
+exports.ClearMaskPass = ClearMaskPass;
+ClearMaskPass.prototype = Object.create(_Pass.Pass.prototype);
+Object.assign(ClearMaskPass.prototype, {
+  render: function (renderer
+  /*, writeBuffer, readBuffer, deltaTime, maskActive */
+  ) {
+    renderer.state.buffers.stencil.setLocked(false);
+    renderer.state.buffers.stencil.setTest(false);
+  }
+});
+},{"../postprocessing/Pass.js":"../node_modules/three/examples/jsm/postprocessing/Pass.js"}],"../node_modules/three/examples/jsm/postprocessing/EffectComposer.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Pass = exports.EffectComposer = void 0;
+
+var _threeModule = require("../../../build/three.module.js");
+
+var _CopyShader = require("../shaders/CopyShader.js");
+
+var _ShaderPass = require("../postprocessing/ShaderPass.js");
+
+var _MaskPass = require("../postprocessing/MaskPass.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ */
+var EffectComposer = function (renderer, renderTarget) {
+  this.renderer = renderer;
+
+  if (renderTarget === undefined) {
+    var parameters = {
+      minFilter: _threeModule.LinearFilter,
+      magFilter: _threeModule.LinearFilter,
+      format: _threeModule.RGBAFormat,
+      stencilBuffer: false
+    };
+    var size = renderer.getSize(new _threeModule.Vector2());
+    this._pixelRatio = renderer.getPixelRatio();
+    this._width = size.width;
+    this._height = size.height;
+    renderTarget = new _threeModule.WebGLRenderTarget(this._width * this._pixelRatio, this._height * this._pixelRatio, parameters);
+    renderTarget.texture.name = 'EffectComposer.rt1';
+  } else {
+    this._pixelRatio = 1;
+    this._width = renderTarget.width;
+    this._height = renderTarget.height;
+  }
+
+  this.renderTarget1 = renderTarget;
+  this.renderTarget2 = renderTarget.clone();
+  this.renderTarget2.texture.name = 'EffectComposer.rt2';
+  this.writeBuffer = this.renderTarget1;
+  this.readBuffer = this.renderTarget2;
+  this.renderToScreen = true;
+  this.passes = []; // dependencies
+
+  if (_CopyShader.CopyShader === undefined) {
+    console.error('THREE.EffectComposer relies on CopyShader');
+  }
+
+  if (_ShaderPass.ShaderPass === undefined) {
+    console.error('THREE.EffectComposer relies on ShaderPass');
+  }
+
+  this.copyPass = new _ShaderPass.ShaderPass(_CopyShader.CopyShader);
+  this.clock = new _threeModule.Clock();
+};
+
+exports.EffectComposer = EffectComposer;
+Object.assign(EffectComposer.prototype, {
+  swapBuffers: function () {
+    var tmp = this.readBuffer;
+    this.readBuffer = this.writeBuffer;
+    this.writeBuffer = tmp;
+  },
+  addPass: function (pass) {
+    this.passes.push(pass);
+    pass.setSize(this._width * this._pixelRatio, this._height * this._pixelRatio);
+  },
+  insertPass: function (pass, index) {
+    this.passes.splice(index, 0, pass);
+  },
+  isLastEnabledPass: function (passIndex) {
+    for (var i = passIndex + 1; i < this.passes.length; i++) {
+      if (this.passes[i].enabled) {
+        return false;
+      }
+    }
+
+    return true;
+  },
+  render: function (deltaTime) {
+    // deltaTime value is in seconds
+    if (deltaTime === undefined) {
+      deltaTime = this.clock.getDelta();
+    }
+
+    var currentRenderTarget = this.renderer.getRenderTarget();
+    var maskActive = false;
+    var pass,
+        i,
+        il = this.passes.length;
+
+    for (i = 0; i < il; i++) {
+      pass = this.passes[i];
+      if (pass.enabled === false) continue;
+      pass.renderToScreen = this.renderToScreen && this.isLastEnabledPass(i);
+      pass.render(this.renderer, this.writeBuffer, this.readBuffer, deltaTime, maskActive);
+
+      if (pass.needsSwap) {
+        if (maskActive) {
+          var context = this.renderer.getContext();
+          var stencil = this.renderer.state.buffers.stencil; //context.stencilFunc( context.NOTEQUAL, 1, 0xffffffff );
+
+          stencil.setFunc(context.NOTEQUAL, 1, 0xffffffff);
+          this.copyPass.render(this.renderer, this.writeBuffer, this.readBuffer, deltaTime); //context.stencilFunc( context.EQUAL, 1, 0xffffffff );
+
+          stencil.setFunc(context.EQUAL, 1, 0xffffffff);
+        }
+
+        this.swapBuffers();
+      }
+
+      if (_MaskPass.MaskPass !== undefined) {
+        if (pass instanceof _MaskPass.MaskPass) {
+          maskActive = true;
+        } else if (pass instanceof _MaskPass.ClearMaskPass) {
+          maskActive = false;
+        }
+      }
+    }
+
+    this.renderer.setRenderTarget(currentRenderTarget);
+  },
+  reset: function (renderTarget) {
+    if (renderTarget === undefined) {
+      var size = this.renderer.getSize(new _threeModule.Vector2());
+      this._pixelRatio = this.renderer.getPixelRatio();
+      this._width = size.width;
+      this._height = size.height;
+      renderTarget = this.renderTarget1.clone();
+      renderTarget.setSize(this._width * this._pixelRatio, this._height * this._pixelRatio);
+    }
+
+    this.renderTarget1.dispose();
+    this.renderTarget2.dispose();
+    this.renderTarget1 = renderTarget;
+    this.renderTarget2 = renderTarget.clone();
+    this.writeBuffer = this.renderTarget1;
+    this.readBuffer = this.renderTarget2;
+  },
+  setSize: function (width, height) {
+    this._width = width;
+    this._height = height;
+    var effectiveWidth = this._width * this._pixelRatio;
+    var effectiveHeight = this._height * this._pixelRatio;
+    this.renderTarget1.setSize(effectiveWidth, effectiveHeight);
+    this.renderTarget2.setSize(effectiveWidth, effectiveHeight);
+
+    for (var i = 0; i < this.passes.length; i++) {
+      this.passes[i].setSize(effectiveWidth, effectiveHeight);
+    }
+  },
+  setPixelRatio: function (pixelRatio) {
+    this._pixelRatio = pixelRatio;
+    this.setSize(this._width, this._height);
+  }
+});
+
+var Pass = function () {
+  // if set to true, the pass is processed by the composer
+  this.enabled = true; // if set to true, the pass indicates to swap read and write buffer after rendering
+
+  this.needsSwap = true; // if set to true, the pass clears its buffer before rendering
+
+  this.clear = false; // if set to true, the result of the pass is rendered to screen. This is set automatically by EffectComposer.
+
+  this.renderToScreen = false;
+};
+
+exports.Pass = Pass;
+Object.assign(Pass.prototype, {
+  setSize: function ()
+  /* width, height */
+  {},
+  render: function ()
+  /* renderer, writeBuffer, readBuffer, deltaTime, maskActive */
+  {
+    console.error('THREE.Pass: .render() must be implemented in derived pass.');
+  }
+}); // Helper for passes that need to fill the viewport with a single quad.
+
+Pass.FullScreenQuad = function () {
+  var camera = new _threeModule.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  var geometry = new _threeModule.PlaneBufferGeometry(2, 2);
+
+  var FullScreenQuad = function (material) {
+    this._mesh = new _threeModule.Mesh(geometry, material);
+  };
+
+  Object.defineProperty(FullScreenQuad.prototype, 'material', {
+    get: function () {
+      return this._mesh.material;
+    },
+    set: function (value) {
+      this._mesh.material = value;
+    }
+  });
+  Object.assign(FullScreenQuad.prototype, {
+    render: function (renderer) {
+      renderer.render(this._mesh, camera);
+    }
+  });
+  return FullScreenQuad;
+}();
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js","../shaders/CopyShader.js":"../node_modules/three/examples/jsm/shaders/CopyShader.js","../postprocessing/ShaderPass.js":"../node_modules/three/examples/jsm/postprocessing/ShaderPass.js","../postprocessing/MaskPass.js":"../node_modules/three/examples/jsm/postprocessing/MaskPass.js"}],"../node_modules/three/examples/jsm/postprocessing/RenderPass.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.RenderPass = void 0;
+
+var _Pass = require("../postprocessing/Pass.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ */
+var RenderPass = function (scene, camera, overrideMaterial, clearColor, clearAlpha) {
+  _Pass.Pass.call(this);
+
+  this.scene = scene;
+  this.camera = camera;
+  this.overrideMaterial = overrideMaterial;
+  this.clearColor = clearColor;
+  this.clearAlpha = clearAlpha !== undefined ? clearAlpha : 0;
+  this.clear = true;
+  this.clearDepth = false;
+  this.needsSwap = false;
+};
+
+exports.RenderPass = RenderPass;
+RenderPass.prototype = Object.assign(Object.create(_Pass.Pass.prototype), {
+  constructor: RenderPass,
+  render: function (renderer, writeBuffer, readBuffer
+  /*, deltaTime, maskActive */
+  ) {
+    var oldAutoClear = renderer.autoClear;
+    renderer.autoClear = false;
+    this.scene.overrideMaterial = this.overrideMaterial;
+    var oldClearColor, oldClearAlpha;
+
+    if (this.clearColor) {
+      oldClearColor = renderer.getClearColor().getHex();
+      oldClearAlpha = renderer.getClearAlpha();
+      renderer.setClearColor(this.clearColor, this.clearAlpha);
+    }
+
+    if (this.clearDepth) {
+      renderer.clearDepth();
+    }
+
+    renderer.setRenderTarget(this.renderToScreen ? null : readBuffer); // TODO: Avoid using autoClear properties, see https://github.com/mrdoob/three.js/pull/15571#issuecomment-465669600
+
+    if (this.clear) renderer.clear(renderer.autoClearColor, renderer.autoClearDepth, renderer.autoClearStencil);
+    renderer.render(this.scene, this.camera);
+
+    if (this.clearColor) {
+      renderer.setClearColor(oldClearColor, oldClearAlpha);
+    }
+
+    this.scene.overrideMaterial = null;
+    renderer.autoClear = oldAutoClear;
+  }
+});
+},{"../postprocessing/Pass.js":"../node_modules/three/examples/jsm/postprocessing/Pass.js"}],"../node_modules/three/examples/jsm/shaders/FilmShader.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.FilmShader = void 0;
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ *
+ * Film grain & scanlines shader
+ *
+ * - ported from HLSL to WebGL / GLSL
+ * http://www.truevision3d.com/forums/showcase/staticnoise_colorblackwhite_scanline_shaders-t18698.0.html
+ *
+ * Screen Space Static Postprocessor
+ *
+ * Produces an analogue noise overlay similar to a film grain / TV static
+ *
+ * Original implementation and noise algorithm
+ * Pat 'Hawthorne' Shearon
+ *
+ * Optimized scanlines + noise version with intensity scaling
+ * Georg 'Leviathan' Steinrohder
+ *
+ * This version is provided under a Creative Commons Attribution 3.0 License
+ * http://creativecommons.org/licenses/by/3.0/
+ */
+var FilmShader = {
+  uniforms: {
+    "tDiffuse": {
+      value: null
+    },
+    "time": {
+      value: 0.0
+    },
+    "nIntensity": {
+      value: 0.5
+    },
+    "sIntensity": {
+      value: 0.05
+    },
+    "sCount": {
+      value: 4096
+    },
+    "grayscale": {
+      value: 1
+    }
+  },
+  vertexShader: ["varying vec2 vUv;", "void main() {", "vUv = uv;", "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );", "}"].join("\n"),
+  fragmentShader: ["#include <common>", // control parameter
+  "uniform float time;", "uniform bool grayscale;", // noise effect intensity value (0 = no effect, 1 = full effect)
+  "uniform float nIntensity;", // scanlines effect intensity value (0 = no effect, 1 = full effect)
+  "uniform float sIntensity;", // scanlines effect count value (0 = no effect, 4096 = full effect)
+  "uniform float sCount;", "uniform sampler2D tDiffuse;", "varying vec2 vUv;", "void main() {", // sample the source
+  "vec4 cTextureScreen = texture2D( tDiffuse, vUv );", // make some noise
+  "float dx = rand( vUv + time );", // add noise
+  "vec3 cResult = cTextureScreen.rgb + cTextureScreen.rgb * clamp( 0.1 + dx, 0.0, 1.0 );", // get us a sine and cosine
+  "vec2 sc = vec2( sin( vUv.y * sCount ), cos( vUv.y * sCount ) );", // add scanlines
+  "cResult += cTextureScreen.rgb * vec3( sc.x, sc.y, sc.x ) * sIntensity;", // interpolate between source and result by intensity
+  "cResult = cTextureScreen.rgb + clamp( nIntensity, 0.0,1.0 ) * ( cResult - cTextureScreen.rgb );", // convert to grayscale if desired
+  "if( grayscale ) {", "cResult = vec3( cResult.r * 0.3 + cResult.g * 0.59 + cResult.b * 0.11 );", "}", "gl_FragColor =  vec4( cResult, cTextureScreen.a );", "}"].join("\n")
+};
+exports.FilmShader = FilmShader;
+},{}],"../node_modules/three/examples/jsm/postprocessing/FilmPass.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.FilmPass = void 0;
+
+var _threeModule = require("../../../build/three.module.js");
+
+var _Pass = require("../postprocessing/Pass.js");
+
+var _FilmShader = require("../shaders/FilmShader.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ */
+var FilmPass = function (noiseIntensity, scanlinesIntensity, scanlinesCount, grayscale) {
+  _Pass.Pass.call(this);
+
+  if (_FilmShader.FilmShader === undefined) console.error("FilmPass relies on FilmShader");
+  var shader = _FilmShader.FilmShader;
+  this.uniforms = _threeModule.UniformsUtils.clone(shader.uniforms);
+  this.material = new _threeModule.ShaderMaterial({
+    uniforms: this.uniforms,
+    vertexShader: shader.vertexShader,
+    fragmentShader: shader.fragmentShader
+  });
+  if (grayscale !== undefined) this.uniforms.grayscale.value = grayscale;
+  if (noiseIntensity !== undefined) this.uniforms.nIntensity.value = noiseIntensity;
+  if (scanlinesIntensity !== undefined) this.uniforms.sIntensity.value = scanlinesIntensity;
+  if (scanlinesCount !== undefined) this.uniforms.sCount.value = scanlinesCount;
+  this.fsQuad = new _Pass.Pass.FullScreenQuad(this.material);
+};
+
+exports.FilmPass = FilmPass;
+FilmPass.prototype = Object.assign(Object.create(_Pass.Pass.prototype), {
+  constructor: FilmPass,
+  render: function (renderer, writeBuffer, readBuffer, deltaTime
+  /*, maskActive */
+  ) {
+    this.uniforms["tDiffuse"].value = readBuffer.texture;
+    this.uniforms["time"].value += deltaTime;
+
+    if (this.renderToScreen) {
+      renderer.setRenderTarget(null);
+      this.fsQuad.render(renderer);
+    } else {
+      renderer.setRenderTarget(writeBuffer);
+      if (this.clear) renderer.clear();
+      this.fsQuad.render(renderer);
+    }
+  }
+});
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js","../postprocessing/Pass.js":"../node_modules/three/examples/jsm/postprocessing/Pass.js","../shaders/FilmShader.js":"../node_modules/three/examples/jsm/shaders/FilmShader.js"}],"../node_modules/three/examples/jsm/shaders/ConvolutionShader.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.ConvolutionShader = void 0;
+
+var _threeModule = require("../../../build/three.module.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ *
+ * Convolution shader
+ * ported from o3d sample to WebGL / GLSL
+ * http://o3d.googlecode.com/svn/trunk/samples/convolution.html
+ */
+var ConvolutionShader = {
+  defines: {
+    "KERNEL_SIZE_FLOAT": "25.0",
+    "KERNEL_SIZE_INT": "25"
+  },
+  uniforms: {
+    "tDiffuse": {
+      value: null
+    },
+    "uImageIncrement": {
+      value: new _threeModule.Vector2(0.001953125, 0.0)
+    },
+    "cKernel": {
+      value: []
+    }
+  },
+  vertexShader: ["uniform vec2 uImageIncrement;", "varying vec2 vUv;", "void main() {", "vUv = uv - ( ( KERNEL_SIZE_FLOAT - 1.0 ) / 2.0 ) * uImageIncrement;", "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );", "}"].join("\n"),
+  fragmentShader: ["uniform float cKernel[ KERNEL_SIZE_INT ];", "uniform sampler2D tDiffuse;", "uniform vec2 uImageIncrement;", "varying vec2 vUv;", "void main() {", "vec2 imageCoord = vUv;", "vec4 sum = vec4( 0.0, 0.0, 0.0, 0.0 );", "for( int i = 0; i < KERNEL_SIZE_INT; i ++ ) {", "sum += texture2D( tDiffuse, imageCoord ) * cKernel[ i ];", "imageCoord += uImageIncrement;", "}", "gl_FragColor = sum;", "}"].join("\n"),
+  buildKernel: function (sigma) {
+    // We lop off the sqrt(2 * pi) * sigma term, since we're going to normalize anyway.
+    function gauss(x, sigma) {
+      return Math.exp(-(x * x) / (2.0 * sigma * sigma));
+    }
+
+    var i,
+        values,
+        sum,
+        halfWidth,
+        kMaxKernelSize = 25,
+        kernelSize = 2 * Math.ceil(sigma * 3.0) + 1;
+    if (kernelSize > kMaxKernelSize) kernelSize = kMaxKernelSize;
+    halfWidth = (kernelSize - 1) * 0.5;
+    values = new Array(kernelSize);
+    sum = 0.0;
+
+    for (i = 0; i < kernelSize; ++i) {
+      values[i] = gauss(i - halfWidth, sigma);
+      sum += values[i];
+    } // normalize the kernel
+
+
+    for (i = 0; i < kernelSize; ++i) values[i] /= sum;
+
+    return values;
+  }
+};
+exports.ConvolutionShader = ConvolutionShader;
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js"}],"../node_modules/three/examples/jsm/postprocessing/BloomPass.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.BloomPass = void 0;
+
+var _threeModule = require("../../../build/three.module.js");
+
+var _Pass = require("../postprocessing/Pass.js");
+
+var _CopyShader = require("../shaders/CopyShader.js");
+
+var _ConvolutionShader = require("../shaders/ConvolutionShader.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ */
+var BloomPass = function (strength, kernelSize, sigma, resolution) {
+  _Pass.Pass.call(this);
+
+  strength = strength !== undefined ? strength : 1;
+  kernelSize = kernelSize !== undefined ? kernelSize : 25;
+  sigma = sigma !== undefined ? sigma : 4.0;
+  resolution = resolution !== undefined ? resolution : 256; // render targets
+
+  var pars = {
+    minFilter: _threeModule.LinearFilter,
+    magFilter: _threeModule.LinearFilter,
+    format: _threeModule.RGBAFormat
+  };
+  this.renderTargetX = new _threeModule.WebGLRenderTarget(resolution, resolution, pars);
+  this.renderTargetX.texture.name = "BloomPass.x";
+  this.renderTargetY = new _threeModule.WebGLRenderTarget(resolution, resolution, pars);
+  this.renderTargetY.texture.name = "BloomPass.y"; // copy material
+
+  if (_CopyShader.CopyShader === undefined) console.error("BloomPass relies on CopyShader");
+  var copyShader = _CopyShader.CopyShader;
+  this.copyUniforms = _threeModule.UniformsUtils.clone(copyShader.uniforms);
+  this.copyUniforms["opacity"].value = strength;
+  this.materialCopy = new _threeModule.ShaderMaterial({
+    uniforms: this.copyUniforms,
+    vertexShader: copyShader.vertexShader,
+    fragmentShader: copyShader.fragmentShader,
+    blending: _threeModule.AdditiveBlending,
+    transparent: true
+  }); // convolution material
+
+  if (_ConvolutionShader.ConvolutionShader === undefined) console.error("BloomPass relies on ConvolutionShader");
+  var convolutionShader = _ConvolutionShader.ConvolutionShader;
+  this.convolutionUniforms = _threeModule.UniformsUtils.clone(convolutionShader.uniforms);
+  this.convolutionUniforms["uImageIncrement"].value = BloomPass.blurX;
+  this.convolutionUniforms["cKernel"].value = _ConvolutionShader.ConvolutionShader.buildKernel(sigma);
+  this.materialConvolution = new _threeModule.ShaderMaterial({
+    uniforms: this.convolutionUniforms,
+    vertexShader: convolutionShader.vertexShader,
+    fragmentShader: convolutionShader.fragmentShader,
+    defines: {
+      "KERNEL_SIZE_FLOAT": kernelSize.toFixed(1),
+      "KERNEL_SIZE_INT": kernelSize.toFixed(0)
+    }
+  });
+  this.needsSwap = false;
+  this.fsQuad = new _Pass.Pass.FullScreenQuad(null);
+};
+
+exports.BloomPass = BloomPass;
+BloomPass.prototype = Object.assign(Object.create(_Pass.Pass.prototype), {
+  constructor: BloomPass,
+  render: function (renderer, writeBuffer, readBuffer, deltaTime, maskActive) {
+    if (maskActive) renderer.state.buffers.stencil.setTest(false); // Render quad with blured scene into texture (convolution pass 1)
+
+    this.fsQuad.material = this.materialConvolution;
+    this.convolutionUniforms["tDiffuse"].value = readBuffer.texture;
+    this.convolutionUniforms["uImageIncrement"].value = BloomPass.blurX;
+    renderer.setRenderTarget(this.renderTargetX);
+    renderer.clear();
+    this.fsQuad.render(renderer); // Render quad with blured scene into texture (convolution pass 2)
+
+    this.convolutionUniforms["tDiffuse"].value = this.renderTargetX.texture;
+    this.convolutionUniforms["uImageIncrement"].value = BloomPass.blurY;
+    renderer.setRenderTarget(this.renderTargetY);
+    renderer.clear();
+    this.fsQuad.render(renderer); // Render original scene with superimposed blur to texture
+
+    this.fsQuad.material = this.materialCopy;
+    this.copyUniforms["tDiffuse"].value = this.renderTargetY.texture;
+    if (maskActive) renderer.state.buffers.stencil.setTest(true);
+    renderer.setRenderTarget(readBuffer);
+    if (this.clear) renderer.clear();
+    this.fsQuad.render(renderer);
+  }
+});
+BloomPass.blurX = new _threeModule.Vector2(0.001953125, 0.0);
+BloomPass.blurY = new _threeModule.Vector2(0.0, 0.001953125);
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js","../postprocessing/Pass.js":"../node_modules/three/examples/jsm/postprocessing/Pass.js","../shaders/CopyShader.js":"../node_modules/three/examples/jsm/shaders/CopyShader.js","../shaders/ConvolutionShader.js":"../node_modules/three/examples/jsm/shaders/ConvolutionShader.js"}],"../node_modules/inherits/inherits_browser.js":[function(require,module,exports) {
+if (typeof Object.create === 'function') {
+  // implementation from standard node.js 'util' module
+  module.exports = function inherits(ctor, superCtor) {
+    if (superCtor) {
+      ctor.super_ = superCtor
+      ctor.prototype = Object.create(superCtor.prototype, {
+        constructor: {
+          value: ctor,
+          enumerable: false,
+          writable: true,
+          configurable: true
+        }
+      })
+    }
+  };
+} else {
+  // old school shim for old browsers
+  module.exports = function inherits(ctor, superCtor) {
+    if (superCtor) {
+      ctor.super_ = superCtor
+      var TempCtor = function () {}
+      TempCtor.prototype = superCtor.prototype
+      ctor.prototype = new TempCtor()
+      ctor.prototype.constructor = ctor
+    }
+  }
+}
+
+},{}],"../node_modules/node-libs-browser/node_modules/events/events.js":[function(require,module,exports) {
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+'use strict';
+
+var R = typeof Reflect === 'object' ? Reflect : null;
+var ReflectApply = R && typeof R.apply === 'function' ? R.apply : function ReflectApply(target, receiver, args) {
+  return Function.prototype.apply.call(target, receiver, args);
+};
+var ReflectOwnKeys;
+
+if (R && typeof R.ownKeys === 'function') {
+  ReflectOwnKeys = R.ownKeys;
+} else if (Object.getOwnPropertySymbols) {
+  ReflectOwnKeys = function ReflectOwnKeys(target) {
+    return Object.getOwnPropertyNames(target).concat(Object.getOwnPropertySymbols(target));
+  };
+} else {
+  ReflectOwnKeys = function ReflectOwnKeys(target) {
+    return Object.getOwnPropertyNames(target);
+  };
+}
+
+function ProcessEmitWarning(warning) {
+  if (console && console.warn) console.warn(warning);
+}
+
+var NumberIsNaN = Number.isNaN || function NumberIsNaN(value) {
+  return value !== value;
+};
+
+function EventEmitter() {
+  EventEmitter.init.call(this);
+}
+
+module.exports = EventEmitter; // Backwards-compat with node 0.10.x
+
+EventEmitter.EventEmitter = EventEmitter;
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._eventsCount = 0;
+EventEmitter.prototype._maxListeners = undefined; // By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+
+var defaultMaxListeners = 10;
+Object.defineProperty(EventEmitter, 'defaultMaxListeners', {
+  enumerable: true,
+  get: function () {
+    return defaultMaxListeners;
+  },
+  set: function (arg) {
+    if (typeof arg !== 'number' || arg < 0 || NumberIsNaN(arg)) {
+      throw new RangeError('The value of "defaultMaxListeners" is out of range. It must be a non-negative number. Received ' + arg + '.');
+    }
+
+    defaultMaxListeners = arg;
+  }
+});
+
+EventEmitter.init = function () {
+  if (this._events === undefined || this._events === Object.getPrototypeOf(this)._events) {
+    this._events = Object.create(null);
+    this._eventsCount = 0;
+  }
+
+  this._maxListeners = this._maxListeners || undefined;
+}; // Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+
+
+EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
+  if (typeof n !== 'number' || n < 0 || NumberIsNaN(n)) {
+    throw new RangeError('The value of "n" is out of range. It must be a non-negative number. Received ' + n + '.');
+  }
+
+  this._maxListeners = n;
+  return this;
+};
+
+function $getMaxListeners(that) {
+  if (that._maxListeners === undefined) return EventEmitter.defaultMaxListeners;
+  return that._maxListeners;
+}
+
+EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
+  return $getMaxListeners(this);
+};
+
+EventEmitter.prototype.emit = function emit(type) {
+  var args = [];
+
+  for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
+
+  var doError = type === 'error';
+  var events = this._events;
+  if (events !== undefined) doError = doError && events.error === undefined;else if (!doError) return false; // If there is no 'error' event listener then throw.
+
+  if (doError) {
+    var er;
+    if (args.length > 0) er = args[0];
+
+    if (er instanceof Error) {
+      // Note: The comments on the `throw` lines are intentional, they show
+      // up in Node's output if this results in an unhandled exception.
+      throw er; // Unhandled 'error' event
+    } // At least give some kind of context to the user
+
+
+    var err = new Error('Unhandled error.' + (er ? ' (' + er.message + ')' : ''));
+    err.context = er;
+    throw err; // Unhandled 'error' event
+  }
+
+  var handler = events[type];
+  if (handler === undefined) return false;
+
+  if (typeof handler === 'function') {
+    ReflectApply(handler, this, args);
+  } else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+
+    for (var i = 0; i < len; ++i) ReflectApply(listeners[i], this, args);
+  }
+
+  return true;
+};
+
+function _addListener(target, type, listener, prepend) {
+  var m;
+  var events;
+  var existing;
+
+  if (typeof listener !== 'function') {
+    throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
+  }
+
+  events = target._events;
+
+  if (events === undefined) {
+    events = target._events = Object.create(null);
+    target._eventsCount = 0;
+  } else {
+    // To avoid recursion in the case that type === "newListener"! Before
+    // adding it to the listeners, first emit "newListener".
+    if (events.newListener !== undefined) {
+      target.emit('newListener', type, listener.listener ? listener.listener : listener); // Re-assign `events` because a newListener handler could have caused the
+      // this._events to be assigned to a new object
+
+      events = target._events;
+    }
+
+    existing = events[type];
+  }
+
+  if (existing === undefined) {
+    // Optimize the case of one listener. Don't need the extra array object.
+    existing = events[type] = listener;
+    ++target._eventsCount;
+  } else {
+    if (typeof existing === 'function') {
+      // Adding the second element, need to change to array.
+      existing = events[type] = prepend ? [listener, existing] : [existing, listener]; // If we've already got an array, just append.
+    } else if (prepend) {
+      existing.unshift(listener);
+    } else {
+      existing.push(listener);
+    } // Check for listener leak
+
+
+    m = $getMaxListeners(target);
+
+    if (m > 0 && existing.length > m && !existing.warned) {
+      existing.warned = true; // No error code for this since it is a Warning
+      // eslint-disable-next-line no-restricted-syntax
+
+      var w = new Error('Possible EventEmitter memory leak detected. ' + existing.length + ' ' + String(type) + ' listeners ' + 'added. Use emitter.setMaxListeners() to ' + 'increase limit');
+      w.name = 'MaxListenersExceededWarning';
+      w.emitter = target;
+      w.type = type;
+      w.count = existing.length;
+      ProcessEmitWarning(w);
+    }
+  }
+
+  return target;
+}
+
+EventEmitter.prototype.addListener = function addListener(type, listener) {
+  return _addListener(this, type, listener, false);
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.prependListener = function prependListener(type, listener) {
+  return _addListener(this, type, listener, true);
+};
+
+function onceWrapper() {
+  var args = [];
+
+  for (var i = 0; i < arguments.length; i++) args.push(arguments[i]);
+
+  if (!this.fired) {
+    this.target.removeListener(this.type, this.wrapFn);
+    this.fired = true;
+    ReflectApply(this.listener, this.target, args);
+  }
+}
+
+function _onceWrap(target, type, listener) {
+  var state = {
+    fired: false,
+    wrapFn: undefined,
+    target: target,
+    type: type,
+    listener: listener
+  };
+  var wrapped = onceWrapper.bind(state);
+  wrapped.listener = listener;
+  state.wrapFn = wrapped;
+  return wrapped;
+}
+
+EventEmitter.prototype.once = function once(type, listener) {
+  if (typeof listener !== 'function') {
+    throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
+  }
+
+  this.on(type, _onceWrap(this, type, listener));
+  return this;
+};
+
+EventEmitter.prototype.prependOnceListener = function prependOnceListener(type, listener) {
+  if (typeof listener !== 'function') {
+    throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
+  }
+
+  this.prependListener(type, _onceWrap(this, type, listener));
+  return this;
+}; // Emits a 'removeListener' event if and only if the listener was removed.
+
+
+EventEmitter.prototype.removeListener = function removeListener(type, listener) {
+  var list, events, position, i, originalListener;
+
+  if (typeof listener !== 'function') {
+    throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
+  }
+
+  events = this._events;
+  if (events === undefined) return this;
+  list = events[type];
+  if (list === undefined) return this;
+
+  if (list === listener || list.listener === listener) {
+    if (--this._eventsCount === 0) this._events = Object.create(null);else {
+      delete events[type];
+      if (events.removeListener) this.emit('removeListener', type, list.listener || listener);
+    }
+  } else if (typeof list !== 'function') {
+    position = -1;
+
+    for (i = list.length - 1; i >= 0; i--) {
+      if (list[i] === listener || list[i].listener === listener) {
+        originalListener = list[i].listener;
+        position = i;
+        break;
+      }
+    }
+
+    if (position < 0) return this;
+    if (position === 0) list.shift();else {
+      spliceOne(list, position);
+    }
+    if (list.length === 1) events[type] = list[0];
+    if (events.removeListener !== undefined) this.emit('removeListener', type, originalListener || listener);
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
+
+EventEmitter.prototype.removeAllListeners = function removeAllListeners(type) {
+  var listeners, events, i;
+  events = this._events;
+  if (events === undefined) return this; // not listening for removeListener, no need to emit
+
+  if (events.removeListener === undefined) {
+    if (arguments.length === 0) {
+      this._events = Object.create(null);
+      this._eventsCount = 0;
+    } else if (events[type] !== undefined) {
+      if (--this._eventsCount === 0) this._events = Object.create(null);else delete events[type];
+    }
+
+    return this;
+  } // emit removeListener for all listeners on all events
+
+
+  if (arguments.length === 0) {
+    var keys = Object.keys(events);
+    var key;
+
+    for (i = 0; i < keys.length; ++i) {
+      key = keys[i];
+      if (key === 'removeListener') continue;
+      this.removeAllListeners(key);
+    }
+
+    this.removeAllListeners('removeListener');
+    this._events = Object.create(null);
+    this._eventsCount = 0;
+    return this;
+  }
+
+  listeners = events[type];
+
+  if (typeof listeners === 'function') {
+    this.removeListener(type, listeners);
+  } else if (listeners !== undefined) {
+    // LIFO order
+    for (i = listeners.length - 1; i >= 0; i--) {
+      this.removeListener(type, listeners[i]);
+    }
+  }
+
+  return this;
+};
+
+function _listeners(target, type, unwrap) {
+  var events = target._events;
+  if (events === undefined) return [];
+  var evlistener = events[type];
+  if (evlistener === undefined) return [];
+  if (typeof evlistener === 'function') return unwrap ? [evlistener.listener || evlistener] : [evlistener];
+  return unwrap ? unwrapListeners(evlistener) : arrayClone(evlistener, evlistener.length);
+}
+
+EventEmitter.prototype.listeners = function listeners(type) {
+  return _listeners(this, type, true);
+};
+
+EventEmitter.prototype.rawListeners = function rawListeners(type) {
+  return _listeners(this, type, false);
+};
+
+EventEmitter.listenerCount = function (emitter, type) {
+  if (typeof emitter.listenerCount === 'function') {
+    return emitter.listenerCount(type);
+  } else {
+    return listenerCount.call(emitter, type);
+  }
+};
+
+EventEmitter.prototype.listenerCount = listenerCount;
+
+function listenerCount(type) {
+  var events = this._events;
+
+  if (events !== undefined) {
+    var evlistener = events[type];
+
+    if (typeof evlistener === 'function') {
+      return 1;
+    } else if (evlistener !== undefined) {
+      return evlistener.length;
+    }
+  }
+
+  return 0;
+}
+
+EventEmitter.prototype.eventNames = function eventNames() {
+  return this._eventsCount > 0 ? ReflectOwnKeys(this._events) : [];
+};
+
+function arrayClone(arr, n) {
+  var copy = new Array(n);
+
+  for (var i = 0; i < n; ++i) copy[i] = arr[i];
+
+  return copy;
+}
+
+function spliceOne(list, index) {
+  for (; index + 1 < list.length; index++) list[index] = list[index + 1];
+
+  list.pop();
+}
+
+function unwrapListeners(arr) {
+  var ret = new Array(arr.length);
+
+  for (var i = 0; i < ret.length; ++i) {
+    ret[i] = arr[i].listener || arr[i];
+  }
+
+  return ret;
+}
+},{}],"../node_modules/right-now/browser.js":[function(require,module,exports) {
+var global = arguments[3];
+module.exports =
+  global.performance &&
+  global.performance.now ? function now() {
+    return performance.now()
+  } : Date.now || function now() {
+    return +new Date
+  }
+
+},{}],"../node_modules/process/browser.js":[function(require,module,exports) {
+
+// shim for using process in browser
+var process = module.exports = {}; // cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+function defaultSetTimout() {
+  throw new Error('setTimeout has not been defined');
+}
+
+function defaultClearTimeout() {
+  throw new Error('clearTimeout has not been defined');
+}
+
+(function () {
+  try {
+    if (typeof setTimeout === 'function') {
+      cachedSetTimeout = setTimeout;
+    } else {
+      cachedSetTimeout = defaultSetTimout;
+    }
+  } catch (e) {
+    cachedSetTimeout = defaultSetTimout;
+  }
+
+  try {
+    if (typeof clearTimeout === 'function') {
+      cachedClearTimeout = clearTimeout;
+    } else {
+      cachedClearTimeout = defaultClearTimeout;
+    }
+  } catch (e) {
+    cachedClearTimeout = defaultClearTimeout;
+  }
+})();
+
+function runTimeout(fun) {
+  if (cachedSetTimeout === setTimeout) {
+    //normal enviroments in sane situations
+    return setTimeout(fun, 0);
+  } // if setTimeout wasn't available but was latter defined
+
+
+  if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+    cachedSetTimeout = setTimeout;
+    return setTimeout(fun, 0);
+  }
+
+  try {
+    // when when somebody has screwed with setTimeout but no I.E. maddness
+    return cachedSetTimeout(fun, 0);
+  } catch (e) {
+    try {
+      // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+      return cachedSetTimeout.call(null, fun, 0);
+    } catch (e) {
+      // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+      return cachedSetTimeout.call(this, fun, 0);
+    }
+  }
+}
+
+function runClearTimeout(marker) {
+  if (cachedClearTimeout === clearTimeout) {
+    //normal enviroments in sane situations
+    return clearTimeout(marker);
+  } // if clearTimeout wasn't available but was latter defined
+
+
+  if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+    cachedClearTimeout = clearTimeout;
+    return clearTimeout(marker);
+  }
+
+  try {
+    // when when somebody has screwed with setTimeout but no I.E. maddness
+    return cachedClearTimeout(marker);
+  } catch (e) {
+    try {
+      // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+      return cachedClearTimeout.call(null, marker);
+    } catch (e) {
+      // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+      // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+      return cachedClearTimeout.call(this, marker);
+    }
+  }
+}
+
+var queue = [];
+var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+  if (!draining || !currentQueue) {
+    return;
+  }
+
+  draining = false;
+
+  if (currentQueue.length) {
+    queue = currentQueue.concat(queue);
+  } else {
+    queueIndex = -1;
+  }
+
+  if (queue.length) {
+    drainQueue();
+  }
+}
+
+function drainQueue() {
+  if (draining) {
+    return;
+  }
+
+  var timeout = runTimeout(cleanUpNextTick);
+  draining = true;
+  var len = queue.length;
+
+  while (len) {
+    currentQueue = queue;
+    queue = [];
+
+    while (++queueIndex < len) {
+      if (currentQueue) {
+        currentQueue[queueIndex].run();
+      }
+    }
+
+    queueIndex = -1;
+    len = queue.length;
+  }
+
+  currentQueue = null;
+  draining = false;
+  runClearTimeout(timeout);
+}
+
+process.nextTick = function (fun) {
+  var args = new Array(arguments.length - 1);
+
+  if (arguments.length > 1) {
+    for (var i = 1; i < arguments.length; i++) {
+      args[i - 1] = arguments[i];
+    }
+  }
+
+  queue.push(new Item(fun, args));
+
+  if (queue.length === 1 && !draining) {
+    runTimeout(drainQueue);
+  }
+}; // v8 likes predictible objects
+
+
+function Item(fun, array) {
+  this.fun = fun;
+  this.array = array;
+}
+
+Item.prototype.run = function () {
+  this.fun.apply(null, this.array);
+};
+
+process.title = 'browser';
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+
+process.versions = {};
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+process.prependListener = noop;
+process.prependOnceListener = noop;
+
+process.listeners = function (name) {
+  return [];
+};
+
+process.binding = function (name) {
+  throw new Error('process.binding is not supported');
+};
+
+process.cwd = function () {
+  return '/';
+};
+
+process.chdir = function (dir) {
+  throw new Error('process.chdir is not supported');
+};
+
+process.umask = function () {
+  return 0;
+};
+},{}],"../node_modules/performance-now/lib/performance-now.js":[function(require,module,exports) {
+var process = require("process");
+// Generated by CoffeeScript 1.12.2
+(function() {
+  var getNanoSeconds, hrtime, loadTime, moduleLoadTime, nodeLoadTime, upTime;
+
+  if ((typeof performance !== "undefined" && performance !== null) && performance.now) {
+    module.exports = function() {
+      return performance.now();
+    };
+  } else if ((typeof process !== "undefined" && process !== null) && process.hrtime) {
+    module.exports = function() {
+      return (getNanoSeconds() - nodeLoadTime) / 1e6;
+    };
+    hrtime = process.hrtime;
+    getNanoSeconds = function() {
+      var hr;
+      hr = hrtime();
+      return hr[0] * 1e9 + hr[1];
+    };
+    moduleLoadTime = getNanoSeconds();
+    upTime = process.uptime() * 1e9;
+    nodeLoadTime = moduleLoadTime - upTime;
+  } else if (Date.now) {
+    module.exports = function() {
+      return Date.now() - loadTime;
+    };
+    loadTime = Date.now();
+  } else {
+    module.exports = function() {
+      return new Date().getTime() - loadTime;
+    };
+    loadTime = new Date().getTime();
+  }
+
+}).call(this);
+
+
+
+},{"process":"../node_modules/process/browser.js"}],"../node_modules/raf/index.js":[function(require,module,exports) {
+var global = arguments[3];
+var now = require('performance-now')
+  , root = typeof window === 'undefined' ? global : window
+  , vendors = ['moz', 'webkit']
+  , suffix = 'AnimationFrame'
+  , raf = root['request' + suffix]
+  , caf = root['cancel' + suffix] || root['cancelRequest' + suffix]
+
+for(var i = 0; !raf && i < vendors.length; i++) {
+  raf = root[vendors[i] + 'Request' + suffix]
+  caf = root[vendors[i] + 'Cancel' + suffix]
+      || root[vendors[i] + 'CancelRequest' + suffix]
+}
+
+// Some versions of FF have rAF but not cAF
+if(!raf || !caf) {
+  var last = 0
+    , id = 0
+    , queue = []
+    , frameDuration = 1000 / 60
+
+  raf = function(callback) {
+    if(queue.length === 0) {
+      var _now = now()
+        , next = Math.max(0, frameDuration - (_now - last))
+      last = next + _now
+      setTimeout(function() {
+        var cp = queue.slice(0)
+        // Clear queue here to prevent
+        // callbacks from appending listeners
+        // to the current frame's queue
+        queue.length = 0
+        for(var i = 0; i < cp.length; i++) {
+          if(!cp[i].cancelled) {
+            try{
+              cp[i].callback(last)
+            } catch(e) {
+              setTimeout(function() { throw e }, 0)
+            }
+          }
+        }
+      }, Math.round(next))
+    }
+    queue.push({
+      handle: ++id,
+      callback: callback,
+      cancelled: false
+    })
+    return id
+  }
+
+  caf = function(handle) {
+    for(var i = 0; i < queue.length; i++) {
+      if(queue[i].handle === handle) {
+        queue[i].cancelled = true
+      }
+    }
+  }
+}
+
+module.exports = function(fn) {
+  // Wrap in a new function to prevent
+  // `cancel` potentially being assigned
+  // to the native rAF function
+  return raf.call(root, fn)
+}
+module.exports.cancel = function() {
+  caf.apply(root, arguments)
+}
+module.exports.polyfill = function(object) {
+  if (!object) {
+    object = root;
+  }
+  object.requestAnimationFrame = raf
+  object.cancelAnimationFrame = caf
+}
+
+},{"performance-now":"../node_modules/performance-now/lib/performance-now.js"}],"../node_modules/raf-loop/index.js":[function(require,module,exports) {
+var inherits = require('inherits')
+var EventEmitter = require('events').EventEmitter
+var now = require('right-now')
+var raf = require('raf')
+
+module.exports = Engine
+function Engine(fn) {
+    if (!(this instanceof Engine)) 
+        return new Engine(fn)
+    this.running = false
+    this.last = now()
+    this._frame = 0
+    this._tick = this.tick.bind(this)
+
+    if (fn)
+        this.on('tick', fn)
+}
+
+inherits(Engine, EventEmitter)
+
+Engine.prototype.start = function() {
+    if (this.running) 
+        return
+    this.running = true
+    this.last = now()
+    this._frame = raf(this._tick)
+    return this
+}
+
+Engine.prototype.stop = function() {
+    this.running = false
+    if (this._frame !== 0)
+        raf.cancel(this._frame)
+    this._frame = 0
+    return this
+}
+
+Engine.prototype.tick = function() {
+    this._frame = raf(this._tick)
+    var time = now()
+    var dt = time - this.last
+    this.emit('tick', dt)
+    this.last = time
+}
+},{"inherits":"../node_modules/inherits/inherits_browser.js","events":"../node_modules/node-libs-browser/node_modules/events/events.js","right-now":"../node_modules/right-now/browser.js","raf":"../node_modules/raf/index.js"}],"js/utils/utils.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.getClosestColour = exports.getInterpolatedColours = exports.getPointFromAngleRadius = exports.colourInterpolate = exports.colorToString = exports.color = exports.shuffle = exports.clamp = exports.distance = exports.mapRange = exports.randomBetween = exports.interpolate = exports.trackMouse = void 0;
+
+var trackMouse = function trackMouse() {
+  window.mouseX = 0;
+  window.mouseY = 0;
+  document.getElementById('canvas').addEventListener('mousemove', function (e) {
+    window.mouseX = e.x - e.target.offsetLeft;
+    window.mouseY = e.y - e.target.offsetTop;
+  });
+};
+
+exports.trackMouse = trackMouse;
+
+var interpolate = function interpolate(t, n1, n2) {
+  return (n2 - n1) * t + n1;
+};
+
+exports.interpolate = interpolate;
+
+var randomBetween = function randomBetween(min, max) {
+  return (max - min) * Math.random() + min;
+};
+
+exports.randomBetween = randomBetween;
+
+var mapRange = function mapRange(v, r1l, r1u, r2l, r2u) {
+  return r2l + (r2u - r2l) * (v - r1l) / (r1u - r1l);
+};
+
+exports.mapRange = mapRange;
+
+var distance = function distance(x1, y1, x2, y2) {
+  var a = x1 - x2;
+  var b = y1 - y2;
+  return Math.sqrt(a * a + b * b);
+};
+
+exports.distance = distance;
+
+var clamp = function clamp(value, max) {
+  var min = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+  return Math.min(Math.max(value, min), max);
+};
+
+exports.clamp = clamp;
+
+var shuffle = function shuffle(array) {
+  var _arr = array.slice();
+
+  for (var i = _arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var _ref = [_arr[j], _arr[i]];
+    _arr[i] = _ref[0];
+    _arr[j] = _ref[1];
+  }
+
+  return _arr;
+};
+
+exports.shuffle = shuffle;
+
+var color = function color(r, g, b) {
+  return {
+    r: r,
+    g: g,
+    b: b
+  };
+};
+
+exports.color = color;
+
+var colorToString = function colorToString(_ref2) {
+  var r = _ref2.r,
+      g = _ref2.g,
+      b = _ref2.b;
+  return "rgb(".concat(r, ", ").concat(g, ", ").concat(b, ")");
+};
+
+exports.colorToString = colorToString;
+
+var colourInterpolate = function colourInterpolate(t, color1, color2) {
+  return color(interpolate(t, color1.r, color2.r), interpolate(t, color1.g, color2.g), interpolate(t, color1.b, color2.b));
+};
+
+exports.colourInterpolate = colourInterpolate;
+
+var getPointFromAngleRadius = function getPointFromAngleRadius(angle, radius) {
+  var x = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+  var y = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+  return {
+    x: x + Math.cos(angle) * radius,
+    y: y + Math.sin(angle) * radius
+  };
+};
+/**
+ * Creates an array of stepped colours through an array of colours
+ *
+ * @param {Array.<{ r: number, g: number, b: number }>} colours
+ * @param {number} granularity
+ *
+ * @returns {Array.<{ r: number, g: number, b: number }>}
+ */
+
+
+exports.getPointFromAngleRadius = getPointFromAngleRadius;
+
+var getInterpolatedColours = function getInterpolatedColours() {
+  var colours = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+  var granularity = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 100;
+  var colourStop = 1 / (colours.length - 1);
+  var granularityStop = 1 / granularity;
+  var colourArr = [];
+
+  for (var i = 0; i <= 1; i += granularityStop) {
+    var t = i % colourStop / colourStop;
+    var currColourIdx = Math.floor(i / colourStop);
+    colourArr.push(colourInterpolate(t, colours[currColourIdx], colours[currColourIdx + 1]));
+  }
+
+  return colourArr;
+};
+/**
+ * Finds what would be the most relevant colour
+ * in a colour array most likely created by
+ * getInterpolatedColours
+ *
+ * @param {number} t
+ * @param {Array.<{ r: number, g: number, b: number }>} colourArr
+ *
+ * @returns {{ r: number, g: number, b: number }}
+ */
+
+
+exports.getInterpolatedColours = getInterpolatedColours;
+
+var getClosestColour = function getClosestColour(t, colourArr) {
+  return colourArr[Math.round((colourArr.length - 1) * t)];
+};
+
+exports.getClosestColour = getClosestColour;
+},{}],"js/utils/baseEngine.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -35657,9 +36578,7 @@ exports.default = void 0;
 
 var _rafLoop = _interopRequireDefault(require("raf-loop"));
 
-var _three = require("three");
-
-var _OrbitControls = require("three/examples/jsm/controls/OrbitControls");
+var _utils = require("./utils");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -35675,12 +36594,154 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
+var BaseEngine =
+/*#__PURE__*/
+function () {
+  function BaseEngine(defaultOptions, options) {
+    _classCallCheck(this, BaseEngine);
+
+    this.options = _objectSpread({}, defaultOptions, {}, options);
+    this.loop = (0, _rafLoop.default)(this.update.bind(this));
+    this.frame = 0;
+    this.windowWidth = window.innerWidth;
+
+    this._renderer = function () {};
+  }
+
+  _createClass(BaseEngine, [{
+    key: "_addEventListeners",
+    value: function _addEventListeners() {
+      var _this = this;
+
+      this.wrapper.addEventListener('click', function () {
+        _this.options.debug = !_this.options.debug;
+        document.body.classList.toggle('debug', _this.options.debug);
+      }, false);
+      this.resizeTimer = setTimeout(function () {});
+      window.addEventListener('resize', function (e) {
+        clearTimeout(_this.resizeTimer);
+        _this.resizeTimer = setTimeout(function () {
+          _this.windowWidth = window.innerWidth;
+
+          _this.updateDimensions(_this.options.width, _this.options.height, _this.options.pixelRatio, _this.options.pixelate);
+        }, 150);
+      });
+    }
+  }, {
+    key: "_removeLoading",
+    value: function _removeLoading() {
+      var loading = document.getElementById('loading');
+      loading.parentElement.removeChild(loading);
+    }
+  }, {
+    key: "updateDimensions",
+    value: function updateDimensions(width, height, pixelRatio) {
+      var pixelate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
+      this.wrapper.style.width = "".concat(width * pixelate, "px");
+      this.wrapper.style.height = "".concat(height * pixelate, "px");
+      this.wrapper.style.transform = "scale(".concat((0, _utils.clamp)(this.windowWidth / width, 1), ")");
+
+      if (this.canvasEl) {
+        this.canvasEl.width = width * pixelRatio;
+        this.canvasEl.height = height * pixelRatio;
+        this.canvasCtx.scale(pixelRatio, pixelRatio);
+      }
+
+      if (this.renderer) {
+        this.renderer.setSize(width, height);
+        this.renderer.setPixelRatio(pixelRatio);
+      }
+    }
+  }, {
+    key: "onRender",
+    value: function onRender() {
+      var fn = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+      this._renderer = fn;
+    }
+  }, {
+    key: "preload",
+    value: function preload() {
+      var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+      return new Promise(function (resolve, reject) {
+        cb(resolve);
+      });
+    }
+  }, {
+    key: "start",
+    value: function start() {
+      this._addEventListeners();
+
+      this._removeLoading();
+
+      this.loop.start();
+    }
+  }, {
+    key: "stop",
+    value: function stop() {
+      this.loop.stop();
+    }
+  }]);
+
+  return BaseEngine;
+}();
+
+var _default = BaseEngine;
+exports.default = _default;
+},{"raf-loop":"../node_modules/raf-loop/index.js","./utils":"js/utils/utils.js"}],"js/utils/engine3d.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _three = require("three");
+
+var _OrbitControls = require("three/examples/jsm/controls/OrbitControls");
+
+var _EffectComposer = require("three/examples/jsm/postprocessing/EffectComposer");
+
+var _RenderPass = require("three/examples/jsm/postprocessing/RenderPass");
+
+var _FilmPass = require("three/examples/jsm/postprocessing/FilmPass");
+
+var _BloomPass = require("three/examples/jsm/postprocessing/BloomPass");
+
+var _baseEngine = _interopRequireDefault(require("./baseEngine"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(source, true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(source).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
 var DEFAULTS = {
   debug: false,
   width: 480,
   height: 480,
   pixelRatio: window.devicePixelRatio,
-  clickToggleDebug: true
+  clickToggleDebug: true,
+  postProcessing: false
 };
 var RENDERER_DEFAULTS = {
   alpha: false
@@ -35688,24 +36749,30 @@ var RENDERER_DEFAULTS = {
 
 var SketchEngine3D =
 /*#__PURE__*/
-function () {
+function (_BaseEngine) {
+  _inherits(SketchEngine3D, _BaseEngine);
+
   function SketchEngine3D(mountEl) {
+    var _this;
+
     var opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var rendererOpts = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
 
     _classCallCheck(this, SketchEngine3D);
 
-    this.options = _objectSpread({}, DEFAULTS, {}, opts);
-    this.rendererOptions = _objectSpread({}, RENDERER_DEFAULTS, {}, rendererOpts);
-    this.mountEl = mountEl;
-    this.scene = new _three.Scene();
-    this.renderer = new _three.WebGLRenderer(this.rendererOptions);
-    this.updateDimensions(this.options.width, this.options.height, this.options.pixelRatio);
-    this.mountEl.appendChild(this.renderer.domElement);
-    this.frame = 0;
-    this.loop = (0, _rafLoop.default)(this.update.bind(this));
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(SketchEngine3D).call(this, DEFAULTS, opts));
+    _this.rendererOptions = _objectSpread({}, RENDERER_DEFAULTS, {}, rendererOpts);
+    _this.mountEl = mountEl;
+    _this.scene = new _three.Scene();
+    _this.renderer = new _three.WebGLRenderer(_this.rendererOptions);
+    _this.renderer.shadowMap.enabled = true;
+    _this.renderer.shadowMap.type = _three.PCFSoftShadowMap;
 
-    this._renderer = function () {};
+    _this.mountEl.appendChild(_this.renderer.domElement);
+
+    _this.updateDimensions(_this.options.width, _this.options.height, _this.options.pixelRatio);
+
+    return _this;
   }
 
   _createClass(SketchEngine3D, [{
@@ -35717,7 +36784,9 @@ function () {
           _ref$autoRotate = _ref.autoRotate,
           autoRotate = _ref$autoRotate === void 0 ? false : _ref$autoRotate,
           _ref$enableZoom = _ref.enableZoom,
-          enableZoom = _ref$enableZoom === void 0 ? false : _ref$enableZoom;
+          enableZoom = _ref$enableZoom === void 0 ? false : _ref$enableZoom,
+          _ref$enabled = _ref.enabled,
+          enabled = _ref$enabled === void 0 ? true : _ref$enabled;
 
       this.camera = camera;
 
@@ -35725,38 +36794,34 @@ function () {
         this.orbit = new _OrbitControls.OrbitControls(this.camera, this.renderer.domElement);
         this.orbit.autoRotate = autoRotate;
         this.orbit.enableZoom = enableZoom;
+        this.orbit.enabled = enabled;
       } else {
         this.orbit = null;
       }
-    }
-  }, {
-    key: "_addEventListeners",
-    value: function _addEventListeners() {
-      var _this = this;
 
-      this.mountEl.addEventListener('click', function () {
-        _this.options.debug = !_this.options.debug;
-        document.body.classList.toggle('debug', _this.options.debug);
-      }, false);
+      if (this.options.postProcessing) {
+        this.addPostProcessing();
+      }
     }
   }, {
-    key: "updateDimensions",
-    value: function updateDimensions(width, height, pixelRatio) {
-      this.mountEl.style.width = "".concat(width, "px");
-      this.mountEl.style.height = "".concat(height, "px");
-      this.renderer.setSize(width, height);
-      this.renderer.setPixelRatio(pixelRatio);
-    }
-  }, {
-    key: "onRender",
-    value: function onRender() {
-      var fn = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-      this._renderer = fn;
-    }
-  }, {
-    key: "start",
-    value: function start() {
-      this.loop.start();
+    key: "addPostProcessing",
+    value: function addPostProcessing() {
+      this.composer = new _EffectComposer.EffectComposer(this.renderer);
+      this.renderScene = new _RenderPass.RenderPass(this.scene, this.camera);
+      this.composer.addPass(this.renderScene); // this.bloomPass = new BloomPass(
+      //   5,    // strength
+      //   12,   // kernel size
+      //   20,    // sigma ?
+      //   5,  // blur render target resolution
+      // );
+      // this.composer.addPass(this.bloomPass);
+      // this.filmPass = new FilmPass(
+      //   1,   // noise intensity
+      //   0.5,  // scanline intensity
+      //   1000,    // scanline count
+      //   false,  // grayscale
+      // );
+      // this.composer.addPass(this.filmPass);
     }
   }, {
     key: "update",
@@ -35778,29 +36843,57 @@ function () {
         this.orbit.update();
       }
 
-      this.renderer.render(this.scene, this.camera);
+      if (this.options.postProcessing) {
+        this.composer.render();
+      } else {
+        this.renderer.render(this.scene, this.camera);
+      }
+
       this.frame++;
     }
   }, {
-    key: "stop",
-    value: function stop() {
-      this.loop.stop();
+    key: "wrapper",
+    get: function get() {
+      return this.mountEl;
     }
   }], [{
+    key: "ORTHOPGRAPHIC_CAMERA",
+    value: function ORTHOPGRAPHIC_CAMERA(width, height) {
+      var _ref2 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
+          _ref2$near = _ref2.near,
+          near = _ref2$near === void 0 ? 1 : _ref2$near,
+          _ref2$far = _ref2.far,
+          far = _ref2$far === void 0 ? 1000 : _ref2$far;
+
+      var camera = new _three.OrthographicCamera(width / -2, width / 2, height / 2, height / -2, near, far);
+      camera.position.z = 500;
+      camera.zoom = 1;
+      camera.updateProjectionMatrix();
+      return camera;
+    }
+  }, {
     key: "PERSPECTIVE_CAMERA",
     value: function PERSPECTIVE_CAMERA(width, height) {
-      var camera = new _three.OrthographicCamera(width / -2, width / 2, height / 2, height / -2, 1, 1000);
-      camera.position.z = 500;
+      var _ref3 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
+          _ref3$fov = _ref3.fov,
+          fov = _ref3$fov === void 0 ? 45 : _ref3$fov,
+          _ref3$near = _ref3.near,
+          near = _ref3$near === void 0 ? 1 : _ref3$near,
+          _ref3$far = _ref3.far,
+          far = _ref3$far === void 0 ? 1000 : _ref3$far;
+
+      var camera = new _three.PerspectiveCamera(fov, width / height, near, far);
+      camera.position.z = 5;
       return camera;
     }
   }]);
 
   return SketchEngine3D;
-}();
+}(_baseEngine.default);
 
 var _default = SketchEngine3D;
 exports.default = _default;
-},{"raf-loop":"../node_modules/raf-loop/index.js","three":"../node_modules/three/build/three.module.js","three/examples/jsm/controls/OrbitControls":"../node_modules/three/examples/jsm/controls/OrbitControls.js"}],"../node_modules/animejs/lib/anime.es.js":[function(require,module,exports) {
+},{"three":"../node_modules/three/build/three.module.js","three/examples/jsm/controls/OrbitControls":"../node_modules/three/examples/jsm/controls/OrbitControls.js","three/examples/jsm/postprocessing/EffectComposer":"../node_modules/three/examples/jsm/postprocessing/EffectComposer.js","three/examples/jsm/postprocessing/RenderPass":"../node_modules/three/examples/jsm/postprocessing/RenderPass.js","three/examples/jsm/postprocessing/FilmPass":"../node_modules/three/examples/jsm/postprocessing/FilmPass.js","three/examples/jsm/postprocessing/BloomPass":"../node_modules/three/examples/jsm/postprocessing/BloomPass.js","./baseEngine":"js/utils/baseEngine.js"}],"../node_modules/animejs/lib/anime.es.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -37823,7 +38916,7 @@ var app = new _engine3d.default(el, {
 }, {
   alpha: true
 });
-app.setCamera(_engine3d.default.PERSPECTIVE_CAMERA(WIDTH, HEIGHT), true, {
+app.setCamera(_engine3d.default.ORTHOPGRAPHIC_CAMERA(WIDTH, HEIGHT), true, {
   enableZoom: true
 });
 var box = new _TileBox.default(app.scene);
@@ -37865,7 +38958,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "64751" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "64604" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
