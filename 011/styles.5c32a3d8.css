@@ -362,6 +362,36 @@ body {
 
 canvas {
   image-rendering: pixelated;
+  width: 480px;
+  height: 480px;
+}
+
+#loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  text-transform: uppercase;
+}
+
+.wrapper {
+  position: relative;
+}
+
+.controls {
+  position: absolute;
+  top: 0;
+  right: 0;
+  max-width: 200px;
+  font-size: 11px;
+  font-family: monospace;
+  text-align: right;
+  pointer-events: none;
 }
 
 /*# sourceMappingURL=/styles.5c32a3d8.css.map */

@@ -1029,132 +1029,21 @@ Engine.prototype.tick = function() {
     this.emit('tick', dt)
     this.last = time
 }
-},{"inherits":"../node_modules/inherits/inherits_browser.js","events":"../node_modules/node-libs-browser/node_modules/events/events.js","right-now":"../node_modules/right-now/browser.js","raf":"../node_modules/raf/index.js"}],"js/utils/engine.js":[function(require,module,exports) {
+},{"inherits":"../node_modules/inherits/inherits_browser.js","events":"../node_modules/node-libs-browser/node_modules/events/events.js","right-now":"../node_modules/right-now/browser.js","raf":"../node_modules/raf/index.js"}],"js/utils/utils.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = void 0;
-
-var _rafLoop = _interopRequireDefault(require("raf-loop"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
-
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(source, true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(source).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
-
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
-
-var DEFAULTS = {
-  debug: false,
-  width: 480,
-  height: 480,
-  pixelRatio: window.devicePixelRatio,
-  clickToggleDebug: true,
-  pixelate: 1
-};
-
-var SketchEngine =
-/*#__PURE__*/
-function () {
-  function SketchEngine(canvasEl) {
-    var opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-    _classCallCheck(this, SketchEngine);
-
-    this.options = _objectSpread({}, DEFAULTS, {}, opts);
-    this.canvasEl = canvasEl;
-    this.canvasCtx = this.canvasEl.getContext('2d');
-    window.ctx = this.canvasCtx;
-    this.frame = 0;
-    this.loop = (0, _rafLoop.default)(this.update.bind(this));
-
-    this._renderer = function () {};
-
-    this._addEventListeners();
-
-    this.updateDimensions(this.options.width, this.options.height, this.options.pixelate, this.options.pixelRatio);
-  }
-
-  _createClass(SketchEngine, [{
-    key: "_addEventListeners",
-    value: function _addEventListeners() {
-      var _this = this;
-
-      this.canvasEl.addEventListener('click', function () {
-        _this.options.debug = !_this.options.debug;
-        document.body.classList.toggle('debug', _this.options.debug);
-      }, false);
-    }
-  }, {
-    key: "updateDimensions",
-    value: function updateDimensions(width, height, pixelate, pixelRatio) {
-      this.canvasEl.width = width * pixelRatio;
-      this.canvasEl.height = height * pixelRatio;
-      this.canvasEl.width = width * pixelRatio;
-      this.canvasEl.height = height * pixelRatio;
-      this.canvasEl.style.width = "".concat(width * pixelate, "px");
-      this.canvasEl.style.height = "".concat(height * pixelate, "px");
-      this.canvasCtx.scale(pixelRatio, pixelRatio);
-    }
-  }, {
-    key: "onRender",
-    value: function onRender() {
-      var fn = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-      this._renderer = fn;
-    }
-  }, {
-    key: "start",
-    value: function start() {
-      this.loop.start();
-    }
-  }, {
-    key: "update",
-    value: function update(dt) {
-      this._renderer({
-        debug: this.options.debug,
-        frame: this.frame,
-        deltaTime: dt,
-        width: this.options.width,
-        height: this.options.height
-      });
-
-      this.frame++;
-    }
-  }, {
-    key: "stop",
-    value: function stop() {
-      this.loop.stop();
-    }
-  }]);
-
-  return SketchEngine;
-}();
-
-var _default = SketchEngine;
-exports.default = _default;
-},{"raf-loop":"../node_modules/raf-loop/index.js"}],"js/utils/utils.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.distance = exports.randomBetween = exports.colourInterpolate = exports.interpolate = exports.trackMouse = void 0;
+exports.clamp = exports.distance = exports.randomBetween = exports.colourInterpolate = exports.interpolate = exports.trackMouse = void 0;
 
 var trackMouse = function trackMouse() {
   window.mouseX = 0;
   window.mouseY = 0;
-  document.getElementById('canvas').addEventListener('mousemove', function (e) {
-    window.mouseX = e.x - e.target.offsetLeft;
-    window.mouseY = e.y - e.target.offsetTop;
+  var el = document.querySelector('.wrapper');
+  el.addEventListener('mousemove', function (e) {
+    window.mouseX = e.x - el.offsetLeft;
+    window.mouseY = e.y - el.offsetTop; // console.log(mouseX);
   });
 };
 
@@ -1189,7 +1078,219 @@ var distance = function distance(x1, y1, x2, y2) {
 };
 
 exports.distance = distance;
-},{}],"js/script.js":[function(require,module,exports) {
+
+var clamp = function clamp(value, max) {
+  var min = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+  return Math.min(Math.max(value, min), max);
+};
+
+exports.clamp = clamp;
+},{}],"js/utils/baseEngine.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _rafLoop = _interopRequireDefault(require("raf-loop"));
+
+var _utils = require("./utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(source, true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(source).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+var BaseEngine =
+/*#__PURE__*/
+function () {
+  function BaseEngine(defaultOptions, options) {
+    _classCallCheck(this, BaseEngine);
+
+    this.options = _objectSpread({}, defaultOptions, {}, options);
+    this.loop = (0, _rafLoop.default)(this.update.bind(this));
+    this.frame = 0;
+    this.windowWidth = window.innerWidth;
+
+    this._renderer = function () {};
+  }
+
+  _createClass(BaseEngine, [{
+    key: "_addEventListeners",
+    value: function _addEventListeners() {
+      var _this = this;
+
+      this.wrapper.addEventListener('click', function () {
+        _this.options.debug = !_this.options.debug;
+        document.body.classList.toggle('debug', _this.options.debug);
+      }, false);
+      this.resizeTimer = setTimeout(function () {});
+      window.addEventListener('resize', function (e) {
+        clearTimeout(_this.resizeTimer);
+        _this.resizeTimer = setTimeout(function () {
+          _this.windowWidth = window.innerWidth;
+
+          _this.updateDimensions(_this.options.width, _this.options.height, _this.options.pixelRatio, _this.options.pixelate);
+        }, 150);
+      });
+    }
+  }, {
+    key: "_removeLoading",
+    value: function _removeLoading() {
+      var loading = document.getElementById('loading');
+      loading.parentElement.removeChild(loading);
+    }
+  }, {
+    key: "updateDimensions",
+    value: function updateDimensions(width, height, pixelRatio) {
+      var pixelate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
+      this.wrapper.style.width = "".concat(width * pixelate, "px");
+      this.wrapper.style.height = "".concat(height * pixelate, "px");
+      this.wrapper.style.transform = "scale(".concat((0, _utils.clamp)(this.windowWidth / width, 1), ")");
+
+      if (this.canvasEl) {
+        this.canvasEl.width = width * pixelRatio;
+        this.canvasEl.height = height * pixelRatio;
+        this.canvasCtx.scale(pixelRatio, pixelRatio);
+      }
+
+      if (this.renderer) {
+        this.renderer.setSize(width, height);
+        this.renderer.setPixelRatio(pixelRatio);
+      }
+    }
+  }, {
+    key: "onRender",
+    value: function onRender() {
+      var fn = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+      this._renderer = fn;
+    }
+  }, {
+    key: "preload",
+    value: function preload() {
+      var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+      return new Promise(function (resolve, reject) {
+        cb(resolve);
+      });
+    }
+  }, {
+    key: "start",
+    value: function start() {
+      this._addEventListeners();
+
+      this._removeLoading();
+
+      this.loop.start();
+    }
+  }, {
+    key: "stop",
+    value: function stop() {
+      this.loop.stop();
+    }
+  }]);
+
+  return BaseEngine;
+}();
+
+var _default = BaseEngine;
+exports.default = _default;
+},{"raf-loop":"../node_modules/raf-loop/index.js","./utils":"js/utils/utils.js"}],"js/utils/engine.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _baseEngine = _interopRequireDefault(require("./baseEngine"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+var DEFAULTS = {
+  debug: false,
+  width: 480,
+  height: 480,
+  pixelRatio: window.devicePixelRatio,
+  clickToggleDebug: true,
+  pixelate: 1
+};
+
+var SketchEngine =
+/*#__PURE__*/
+function (_BaseEngine) {
+  _inherits(SketchEngine, _BaseEngine);
+
+  function SketchEngine(canvasEl) {
+    var _this;
+
+    var opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+    _classCallCheck(this, SketchEngine);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(SketchEngine).call(this, DEFAULTS, opts));
+    _this.canvasEl = canvasEl;
+    _this.canvasCtx = _this.canvasEl.getContext('2d');
+    window.ctx = _this.canvasCtx;
+
+    _this.updateDimensions(_this.options.width, _this.options.height, _this.options.pixelRatio, _this.options.pixelate);
+
+    return _this;
+  }
+
+  _createClass(SketchEngine, [{
+    key: "update",
+    value: function update(dt) {
+      this._renderer({
+        debug: this.options.debug,
+        frame: this.frame,
+        deltaTime: dt,
+        width: this.options.width,
+        height: this.options.height
+      });
+
+      this.frame++;
+    }
+  }, {
+    key: "wrapper",
+    get: function get() {
+      return this.canvasEl;
+    }
+  }]);
+
+  return SketchEngine;
+}(_baseEngine.default);
+
+var _default = SketchEngine;
+exports.default = _default;
+},{"./baseEngine":"js/utils/baseEngine.js"}],"js/script.js":[function(require,module,exports) {
 "use strict";
 
 var _sound = _interopRequireDefault(require("../sounds/sound.mp3"));
@@ -1314,30 +1415,33 @@ app.onRender(function (_ref) {
     ctx.restore();
   }
 });
-app.start();
-analyse().then(function () {
-  sounds = [(0, _sound2.default)(audioBuffer, context, 10), (0, _sound2.default)(audioBuffer, context, 20), (0, _sound2.default)(audioBuffer, context, 30), (0, _sound2.default)(audioBuffer, context, 40)];
-  sounds.forEach(function (s) {
-    return s.onTime(onTimeUpdate);
-  });
+app.preload(function (done) {
+  analyse().then(function () {
+    sounds = [(0, _sound2.default)(audioBuffer, context, 10), (0, _sound2.default)(audioBuffer, context, 20), (0, _sound2.default)(audioBuffer, context, 30), (0, _sound2.default)(audioBuffer, context, 40)];
+    sounds.forEach(function (s) {
+      return s.onTime(onTimeUpdate);
+    });
 
-  var playNote = function playNote(idx) {
-    for (var i = 0; i < sounds.length; i++) {
-      if (i == idx) {
-        sounds[i].play(sampleDuration / 1000);
-        currSample = i;
-      } else {
-        sounds[i].stop();
+    var playNote = function playNote(idx) {
+      for (var i = 0; i < sounds.length; i++) {
+        if (i == idx) {
+          sounds[i].play(sampleDuration / 1000);
+          currSample = i;
+        } else {
+          sounds[i].stop();
+        }
       }
-    }
 
-    idx++;
-    setTimeout(function () {
-      return playNote(idx % sounds.length);
-    }, sampleDuration);
-  };
+      idx++;
+      setTimeout(function () {
+        return playNote(idx % sounds.length);
+      }, sampleDuration);
+    };
 
-  playNote(0);
+    playNote(0);
+    done();
+  });
+}).then(function () {
   app.start();
   (0, _utils.trackMouse)();
 });
@@ -1399,7 +1503,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "54054" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "62443" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
