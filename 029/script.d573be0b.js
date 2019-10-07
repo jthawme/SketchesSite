@@ -146,7 +146,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/node_modules/events/events.js":[function(require,module,exports) {
+},{}],"../node_modules/node-libs-browser/node_modules/events/events.js":[function(require,module,exports) {
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -574,7 +574,7 @@ module.exports =
     return +new Date
   }
 
-},{}],"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/node_modules/process/browser.js":[function(require,module,exports) {
+},{}],"../node_modules/process/browser.js":[function(require,module,exports) {
 
 // shim for using process in browser
 var process = module.exports = {}; // cached from whatever global is present so that test runners that stub it
@@ -822,7 +822,7 @@ var process = require("process");
 
 
 
-},{"process":"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/node_modules/process/browser.js"}],"../node_modules/raf/index.js":[function(require,module,exports) {
+},{"process":"../node_modules/process/browser.js"}],"../node_modules/raf/index.js":[function(require,module,exports) {
 var global = arguments[3];
 var now = require('performance-now')
   , root = typeof window === 'undefined' ? global : window
@@ -945,7 +945,153 @@ Engine.prototype.tick = function() {
     this.emit('tick', dt)
     this.last = time
 }
-},{"inherits":"../node_modules/inherits/inherits_browser.js","events":"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/node_modules/events/events.js","right-now":"../node_modules/right-now/browser.js","raf":"../node_modules/raf/index.js"}],"js/utils/engine.js":[function(require,module,exports) {
+},{"inherits":"../node_modules/inherits/inherits_browser.js","events":"../node_modules/node-libs-browser/node_modules/events/events.js","right-now":"../node_modules/right-now/browser.js","raf":"../node_modules/raf/index.js"}],"js/utils/utils.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.getClosestColour = exports.getInterpolatedColours = exports.getPointFromAngleRadius = exports.colourInterpolate = exports.colorToString = exports.color = exports.shuffle = exports.clamp = exports.distance = exports.mapRange = exports.randomBetween = exports.interpolate = exports.trackMouse = void 0;
+
+var trackMouse = function trackMouse() {
+  window.mouseX = 0;
+  window.mouseY = 0;
+  document.getElementById('canvas').addEventListener('mousemove', function (e) {
+    window.mouseX = e.x - e.target.offsetLeft;
+    window.mouseY = e.y - e.target.offsetTop;
+  });
+};
+
+exports.trackMouse = trackMouse;
+
+var interpolate = function interpolate(t, n1, n2) {
+  return (n2 - n1) * t + n1;
+};
+
+exports.interpolate = interpolate;
+
+var randomBetween = function randomBetween(min, max) {
+  return (max - min) * Math.random() + min;
+};
+
+exports.randomBetween = randomBetween;
+
+var mapRange = function mapRange(v, r1l, r1u, r2l, r2u) {
+  return r2l + (r2u - r2l) * (v - r1l) / (r1u - r1l);
+};
+
+exports.mapRange = mapRange;
+
+var distance = function distance(x1, y1, x2, y2) {
+  var a = x1 - x2;
+  var b = y1 - y2;
+  return Math.sqrt(a * a + b * b);
+};
+
+exports.distance = distance;
+
+var clamp = function clamp(value, max) {
+  var min = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+  return Math.min(Math.max(value, min), max);
+};
+
+exports.clamp = clamp;
+
+var shuffle = function shuffle(array) {
+  var _arr = array.slice();
+
+  for (var i = _arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var _ref = [_arr[j], _arr[i]];
+    _arr[i] = _ref[0];
+    _arr[j] = _ref[1];
+  }
+
+  return _arr;
+};
+
+exports.shuffle = shuffle;
+
+var color = function color(r, g, b) {
+  return {
+    r: r,
+    g: g,
+    b: b
+  };
+};
+
+exports.color = color;
+
+var colorToString = function colorToString(_ref2) {
+  var r = _ref2.r,
+      g = _ref2.g,
+      b = _ref2.b;
+  return "rgb(".concat(r, ", ").concat(g, ", ").concat(b, ")");
+};
+
+exports.colorToString = colorToString;
+
+var colourInterpolate = function colourInterpolate(t, color1, color2) {
+  return color(interpolate(t, color1.r, color2.r), interpolate(t, color1.g, color2.g), interpolate(t, color1.b, color2.b));
+};
+
+exports.colourInterpolate = colourInterpolate;
+
+var getPointFromAngleRadius = function getPointFromAngleRadius(angle, radius) {
+  var x = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+  var y = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+  return {
+    x: x + Math.cos(angle) * radius,
+    y: y + Math.sin(angle) * radius
+  };
+};
+/**
+ * Creates an array of stepped colours through an array of colours
+ *
+ * @param {Array.<{ r: number, g: number, b: number }>} colours
+ * @param {number} granularity
+ *
+ * @returns {Array.<{ r: number, g: number, b: number }>}
+ */
+
+
+exports.getPointFromAngleRadius = getPointFromAngleRadius;
+
+var getInterpolatedColours = function getInterpolatedColours() {
+  var colours = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+  var granularity = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 100;
+  var colourStop = 1 / (colours.length - 1);
+  var granularityStop = 1 / granularity;
+  var colourArr = [];
+
+  for (var i = 0; i <= 1; i += granularityStop) {
+    var t = i % colourStop / colourStop;
+    var currColourIdx = Math.floor(i / colourStop);
+    colourArr.push(colourInterpolate(t, colours[currColourIdx], colours[currColourIdx + 1]));
+  }
+
+  return colourArr;
+};
+/**
+ * Finds what would be the most relevant colour
+ * in a colour array most likely created by
+ * getInterpolatedColours
+ *
+ * @param {number} t
+ * @param {Array.<{ r: number, g: number, b: number }>} colourArr
+ *
+ * @returns {{ r: number, g: number, b: number }}
+ */
+
+
+exports.getInterpolatedColours = getInterpolatedColours;
+
+var getClosestColour = function getClosestColour(t, colourArr) {
+  return colourArr[Math.round((colourArr.length - 1) * t)];
+};
+
+exports.getClosestColour = getClosestColour;
+},{}],"js/utils/baseEngine.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -955,9 +1101,13 @@ exports.default = void 0;
 
 var _rafLoop = _interopRequireDefault(require("raf-loop"));
 
+var _utils = require("./utils");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(source, true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(source).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
@@ -966,6 +1116,129 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+var BaseEngine =
+/*#__PURE__*/
+function () {
+  function BaseEngine(defaultOptions, options) {
+    _classCallCheck(this, BaseEngine);
+
+    this.options = _objectSpread({}, defaultOptions, {}, options);
+    this.loop = (0, _rafLoop.default)(this.update.bind(this));
+    this.frame = 0;
+    this.windowWidth = window.innerWidth;
+
+    this._renderer = function () {};
+  }
+
+  _createClass(BaseEngine, [{
+    key: "_addEventListeners",
+    value: function _addEventListeners() {
+      var _this = this;
+
+      this.wrapper.addEventListener('click', function () {
+        _this.options.debug = !_this.options.debug;
+        document.body.classList.toggle('debug', _this.options.debug);
+      }, false);
+      this.resizeTimer = setTimeout(function () {});
+      window.addEventListener('resize', function (e) {
+        clearTimeout(_this.resizeTimer);
+        _this.resizeTimer = setTimeout(function () {
+          _this.windowWidth = window.innerWidth;
+
+          _this.updateDimensions(_this.options.width, _this.options.height, _this.options.pixelRatio, _this.options.pixelate);
+        }, 150);
+      });
+    }
+  }, {
+    key: "_removeLoading",
+    value: function _removeLoading() {
+      var loading = document.getElementById('loading');
+      loading.parentElement.removeChild(loading);
+    }
+  }, {
+    key: "updateDimensions",
+    value: function updateDimensions(width, height, pixelRatio) {
+      var pixelate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
+      this.wrapper.style.width = "".concat(width * pixelate, "px");
+      this.wrapper.style.height = "".concat(height * pixelate, "px");
+      this.wrapper.style.transform = "scale(".concat((0, _utils.clamp)(this.windowWidth / width, 1), ")");
+
+      if (this.canvasEl) {
+        this.canvasEl.width = width * pixelRatio;
+        this.canvasEl.height = height * pixelRatio;
+        this.canvasCtx.scale(pixelRatio, pixelRatio);
+      }
+
+      if (this.renderer) {
+        this.renderer.setSize(width, height);
+        this.renderer.setPixelRatio(pixelRatio);
+      }
+    }
+  }, {
+    key: "onRender",
+    value: function onRender() {
+      var fn = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+      this._renderer = fn;
+    }
+  }, {
+    key: "preload",
+    value: function preload() {
+      var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+      return new Promise(function (resolve, reject) {
+        cb(resolve);
+      });
+    }
+  }, {
+    key: "start",
+    value: function start() {
+      this._addEventListeners();
+
+      this._removeLoading();
+
+      this.loop.start();
+    }
+  }, {
+    key: "stop",
+    value: function stop() {
+      this.loop.stop();
+    }
+  }]);
+
+  return BaseEngine;
+}();
+
+var _default = BaseEngine;
+exports.default = _default;
+},{"raf-loop":"../node_modules/raf-loop/index.js","./utils":"js/utils/utils.js"}],"js/utils/engine.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _baseEngine = _interopRequireDefault(require("./baseEngine"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 var DEFAULTS = {
   debug: false,
@@ -978,59 +1251,27 @@ var DEFAULTS = {
 
 var SketchEngine =
 /*#__PURE__*/
-function () {
+function (_BaseEngine) {
+  _inherits(SketchEngine, _BaseEngine);
+
   function SketchEngine(canvasEl) {
+    var _this;
+
     var opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
     _classCallCheck(this, SketchEngine);
 
-    this.options = _objectSpread({}, DEFAULTS, opts);
-    this.canvasEl = canvasEl;
-    this.canvasCtx = this.canvasEl.getContext('2d');
-    window.ctx = this.canvasCtx;
-    this.frame = 0;
-    this.loop = (0, _rafLoop.default)(this.update.bind(this));
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(SketchEngine).call(this, DEFAULTS, opts));
+    _this.canvasEl = canvasEl;
+    _this.canvasCtx = _this.canvasEl.getContext('2d');
+    window.ctx = _this.canvasCtx;
 
-    this._renderer = function () {};
+    _this.updateDimensions(_this.options.width, _this.options.height, _this.options.pixelRatio, _this.options.pixelate);
 
-    this._addEventListeners();
-
-    this.updateDimensions(this.options.width, this.options.height, this.options.pixelate, this.options.pixelRatio);
+    return _this;
   }
 
   _createClass(SketchEngine, [{
-    key: "_addEventListeners",
-    value: function _addEventListeners() {
-      var _this = this;
-
-      this.canvasEl.addEventListener('click', function () {
-        _this.options.debug = !_this.options.debug;
-        document.body.classList.toggle('debug', _this.options.debug);
-      }, false);
-    }
-  }, {
-    key: "updateDimensions",
-    value: function updateDimensions(width, height, pixelate, pixelRatio) {
-      this.canvasEl.width = width * pixelRatio;
-      this.canvasEl.height = height * pixelRatio;
-      this.canvasEl.width = width * pixelRatio;
-      this.canvasEl.height = height * pixelRatio;
-      this.canvasEl.style.width = "".concat(width * pixelate, "px");
-      this.canvasEl.style.height = "".concat(height * pixelate, "px");
-      this.canvasCtx.scale(pixelRatio, pixelRatio);
-    }
-  }, {
-    key: "onRender",
-    value: function onRender() {
-      var fn = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-      this._renderer = fn;
-    }
-  }, {
-    key: "start",
-    value: function start() {
-      this.loop.start();
-    }
-  }, {
     key: "update",
     value: function update(dt) {
       this._renderer({
@@ -1044,18 +1285,18 @@ function () {
       this.frame++;
     }
   }, {
-    key: "stop",
-    value: function stop() {
-      this.loop.stop();
+    key: "wrapper",
+    get: function get() {
+      return this.canvasEl;
     }
   }]);
 
   return SketchEngine;
-}();
+}(_baseEngine.default);
 
 var _default = SketchEngine;
 exports.default = _default;
-},{"raf-loop":"../node_modules/raf-loop/index.js"}],"../node_modules/string.prototype.codepointat/codepointat.js":[function(require,module,exports) {
+},{"./baseEngine":"js/utils/baseEngine.js"}],"../node_modules/string.prototype.codepointat/codepointat.js":[function(require,module,exports) {
 /*! https://mths.be/codepointat v0.2.0 by @mathias */
 if (!String.prototype.codePointAt) {
 	(function() {
@@ -11233,7 +11474,7 @@ Substitution.prototype.add = function (feature, sub, script, language) {
 
 var _default = Substitution;
 exports.default = _default;
-},{"./check":"../node_modules/opentype.js/src/check.js","./layout":"../node_modules/opentype.js/src/layout.js"}],"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/node_modules/base64-js/index.js":[function(require,module,exports) {
+},{"./check":"../node_modules/opentype.js/src/check.js","./layout":"../node_modules/opentype.js/src/layout.js"}],"../node_modules/base64-js/index.js":[function(require,module,exports) {
 'use strict'
 
 exports.byteLength = byteLength
@@ -11386,7 +11627,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/node_modules/ieee754/index.js":[function(require,module,exports) {
+},{}],"../node_modules/ieee754/index.js":[function(require,module,exports) {
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = (nBytes * 8) - mLen - 1
@@ -11472,14 +11713,14 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/node_modules/isarray/index.js":[function(require,module,exports) {
+},{}],"../node_modules/isarray/index.js":[function(require,module,exports) {
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/node_modules/buffer/index.js":[function(require,module,exports) {
+},{}],"../node_modules/buffer/index.js":[function(require,module,exports) {
 
 var global = arguments[3];
 /*!
@@ -13272,7 +13513,7 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/node_modules/base64-js/index.js","ieee754":"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/node_modules/ieee754/index.js","isarray":"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/node_modules/isarray/index.js","buffer":"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/node_modules/buffer/index.js"}],"../node_modules/opentype.js/src/util.js":[function(require,module,exports) {
+},{"base64-js":"../node_modules/base64-js/index.js","ieee754":"../node_modules/ieee754/index.js","isarray":"../node_modules/isarray/index.js","buffer":"../node_modules/buffer/index.js"}],"../node_modules/opentype.js/src/util.js":[function(require,module,exports) {
 var Buffer = require("buffer").Buffer;
 "use strict";
 
@@ -13320,7 +13561,7 @@ function checkArgument(expression, message) {
     throw message;
   }
 }
-},{"buffer":"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/node_modules/buffer/index.js"}],"../node_modules/opentype.js/src/tables/glyf.js":[function(require,module,exports) {
+},{"buffer":"../node_modules/buffer/index.js"}],"../node_modules/opentype.js/src/tables/glyf.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18673,7 +18914,7 @@ Bidi.prototype.getTextGlyphs = function (text) {
 
 var _default = Bidi;
 exports.default = _default;
-},{"./tokenizer":"../node_modules/opentype.js/src/tokenizer.js","./features/featureQuery":"../node_modules/opentype.js/src/features/featureQuery.js","./features/arab/contextCheck/arabicWord":"../node_modules/opentype.js/src/features/arab/contextCheck/arabicWord.js","./features/arab/contextCheck/arabicSentence":"../node_modules/opentype.js/src/features/arab/contextCheck/arabicSentence.js","./features/arab/arabicPresentationForms":"../node_modules/opentype.js/src/features/arab/arabicPresentationForms.js","./features/arab/arabicRequiredLigatures":"../node_modules/opentype.js/src/features/arab/arabicRequiredLigatures.js","./features/latn/contextCheck/latinWord":"../node_modules/opentype.js/src/features/latn/contextCheck/latinWord.js","./features/latn/latinLigatures":"../node_modules/opentype.js/src/features/latn/latinLigatures.js"}],"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/src/builtins/_empty.js":[function(require,module,exports) {
+},{"./tokenizer":"../node_modules/opentype.js/src/tokenizer.js","./features/featureQuery":"../node_modules/opentype.js/src/features/featureQuery.js","./features/arab/contextCheck/arabicWord":"../node_modules/opentype.js/src/features/arab/contextCheck/arabicWord.js","./features/arab/contextCheck/arabicSentence":"../node_modules/opentype.js/src/features/arab/contextCheck/arabicSentence.js","./features/arab/arabicPresentationForms":"../node_modules/opentype.js/src/features/arab/arabicPresentationForms.js","./features/arab/arabicRequiredLigatures":"../node_modules/opentype.js/src/features/arab/arabicRequiredLigatures.js","./features/latn/contextCheck/latinWord":"../node_modules/opentype.js/src/features/latn/contextCheck/latinWord.js","./features/latn/latinLigatures":"../node_modules/opentype.js/src/features/latn/latinLigatures.js"}],"../node_modules/parcel-bundler/src/builtins/_empty.js":[function(require,module,exports) {
 
 },{}],"../node_modules/opentype.js/src/font.js":[function(require,module,exports) {
 "use strict";
@@ -19348,7 +19589,7 @@ Font.prototype.usWeightClasses = {
 };
 var _default = Font;
 exports.default = _default;
-},{"./path":"../node_modules/opentype.js/src/path.js","./tables/sfnt":"../node_modules/opentype.js/src/tables/sfnt.js","./encoding":"../node_modules/opentype.js/src/encoding.js","./glyphset":"../node_modules/opentype.js/src/glyphset.js","./position":"../node_modules/opentype.js/src/position.js","./substitution":"../node_modules/opentype.js/src/substitution.js","./util":"../node_modules/opentype.js/src/util.js","./hintingtt":"../node_modules/opentype.js/src/hintingtt.js","./bidi":"../node_modules/opentype.js/src/bidi.js","fs":"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/src/builtins/_empty.js"}],"../node_modules/opentype.js/src/tables/fvar.js":[function(require,module,exports) {
+},{"./path":"../node_modules/opentype.js/src/path.js","./tables/sfnt":"../node_modules/opentype.js/src/tables/sfnt.js","./encoding":"../node_modules/opentype.js/src/encoding.js","./glyphset":"../node_modules/opentype.js/src/glyphset.js","./position":"../node_modules/opentype.js/src/position.js","./substitution":"../node_modules/opentype.js/src/substitution.js","./util":"../node_modules/opentype.js/src/util.js","./hintingtt":"../node_modules/opentype.js/src/hintingtt.js","./bidi":"../node_modules/opentype.js/src/bidi.js","fs":"../node_modules/parcel-bundler/src/builtins/_empty.js"}],"../node_modules/opentype.js/src/tables/fvar.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -20418,7 +20659,7 @@ function loadSync(url, opt) {
   const buffer = fs.readFileSync(url);
   return parseBuffer((0, _util.nodeBufferToArrayBuffer)(buffer), opt);
 }
-},{"string.prototype.codepointat":"../node_modules/string.prototype.codepointat/codepointat.js","tiny-inflate":"../node_modules/tiny-inflate/index.js","./font":"../node_modules/opentype.js/src/font.js","./glyph":"../node_modules/opentype.js/src/glyph.js","./encoding":"../node_modules/opentype.js/src/encoding.js","./parse":"../node_modules/opentype.js/src/parse.js","./bbox":"../node_modules/opentype.js/src/bbox.js","./path":"../node_modules/opentype.js/src/path.js","./util":"../node_modules/opentype.js/src/util.js","./tables/cmap":"../node_modules/opentype.js/src/tables/cmap.js","./tables/cff":"../node_modules/opentype.js/src/tables/cff.js","./tables/fvar":"../node_modules/opentype.js/src/tables/fvar.js","./tables/glyf":"../node_modules/opentype.js/src/tables/glyf.js","./tables/gpos":"../node_modules/opentype.js/src/tables/gpos.js","./tables/gsub":"../node_modules/opentype.js/src/tables/gsub.js","./tables/head":"../node_modules/opentype.js/src/tables/head.js","./tables/hhea":"../node_modules/opentype.js/src/tables/hhea.js","./tables/hmtx":"../node_modules/opentype.js/src/tables/hmtx.js","./tables/kern":"../node_modules/opentype.js/src/tables/kern.js","./tables/ltag":"../node_modules/opentype.js/src/tables/ltag.js","./tables/loca":"../node_modules/opentype.js/src/tables/loca.js","./tables/maxp":"../node_modules/opentype.js/src/tables/maxp.js","./tables/name":"../node_modules/opentype.js/src/tables/name.js","./tables/os2":"../node_modules/opentype.js/src/tables/os2.js","./tables/post":"../node_modules/opentype.js/src/tables/post.js","./tables/meta":"../node_modules/opentype.js/src/tables/meta.js","fs":"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/src/builtins/_empty.js"}],"js/utils/paths.js":[function(require,module,exports) {
+},{"string.prototype.codepointat":"../node_modules/string.prototype.codepointat/codepointat.js","tiny-inflate":"../node_modules/tiny-inflate/index.js","./font":"../node_modules/opentype.js/src/font.js","./glyph":"../node_modules/opentype.js/src/glyph.js","./encoding":"../node_modules/opentype.js/src/encoding.js","./parse":"../node_modules/opentype.js/src/parse.js","./bbox":"../node_modules/opentype.js/src/bbox.js","./path":"../node_modules/opentype.js/src/path.js","./util":"../node_modules/opentype.js/src/util.js","./tables/cmap":"../node_modules/opentype.js/src/tables/cmap.js","./tables/cff":"../node_modules/opentype.js/src/tables/cff.js","./tables/fvar":"../node_modules/opentype.js/src/tables/fvar.js","./tables/glyf":"../node_modules/opentype.js/src/tables/glyf.js","./tables/gpos":"../node_modules/opentype.js/src/tables/gpos.js","./tables/gsub":"../node_modules/opentype.js/src/tables/gsub.js","./tables/head":"../node_modules/opentype.js/src/tables/head.js","./tables/hhea":"../node_modules/opentype.js/src/tables/hhea.js","./tables/hmtx":"../node_modules/opentype.js/src/tables/hmtx.js","./tables/kern":"../node_modules/opentype.js/src/tables/kern.js","./tables/ltag":"../node_modules/opentype.js/src/tables/ltag.js","./tables/loca":"../node_modules/opentype.js/src/tables/loca.js","./tables/maxp":"../node_modules/opentype.js/src/tables/maxp.js","./tables/name":"../node_modules/opentype.js/src/tables/name.js","./tables/os2":"../node_modules/opentype.js/src/tables/os2.js","./tables/post":"../node_modules/opentype.js/src/tables/post.js","./tables/meta":"../node_modules/opentype.js/src/tables/meta.js","fs":"../node_modules/parcel-bundler/src/builtins/_empty.js"}],"js/utils/paths.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -20550,152 +20791,6 @@ var getPointOnArc = function getPointOnArc(cx, cy, angle, radius) {
 };
 
 exports.getPointOnArc = getPointOnArc;
-},{}],"js/utils/utils.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.getClosestColour = exports.getInterpolatedColours = exports.getPointFromAngleRadius = exports.colourInterpolate = exports.colorToString = exports.color = exports.shuffle = exports.clamp = exports.distance = exports.mapRange = exports.randomBetween = exports.interpolate = exports.trackMouse = void 0;
-
-var trackMouse = function trackMouse() {
-  window.mouseX = 0;
-  window.mouseY = 0;
-  document.getElementById('canvas').addEventListener('mousemove', function (e) {
-    window.mouseX = e.x - e.target.offsetLeft;
-    window.mouseY = e.y - e.target.offsetTop;
-  });
-};
-
-exports.trackMouse = trackMouse;
-
-var interpolate = function interpolate(t, n1, n2) {
-  return (n2 - n1) * t + n1;
-};
-
-exports.interpolate = interpolate;
-
-var randomBetween = function randomBetween(min, max) {
-  return (max - min) * Math.random() + min;
-};
-
-exports.randomBetween = randomBetween;
-
-var mapRange = function mapRange(v, r1l, r1u, r2l, r2u) {
-  return r2l + (r2u - r2l) * (v - r1l) / (r1u - r1l);
-};
-
-exports.mapRange = mapRange;
-
-var distance = function distance(x1, y1, x2, y2) {
-  var a = x1 - x2;
-  var b = y1 - y2;
-  return Math.sqrt(a * a + b * b);
-};
-
-exports.distance = distance;
-
-var clamp = function clamp(value, max) {
-  var min = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-  return Math.min(Math.max(value, min), max);
-};
-
-exports.clamp = clamp;
-
-var shuffle = function shuffle(array) {
-  var _arr = array.slice();
-
-  for (var i = _arr.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var _ref = [_arr[j], _arr[i]];
-    _arr[i] = _ref[0];
-    _arr[j] = _ref[1];
-  }
-
-  return _arr;
-};
-
-exports.shuffle = shuffle;
-
-var color = function color(r, g, b) {
-  return {
-    r: r,
-    g: g,
-    b: b
-  };
-};
-
-exports.color = color;
-
-var colorToString = function colorToString(_ref2) {
-  var r = _ref2.r,
-      g = _ref2.g,
-      b = _ref2.b;
-  return "rgb(".concat(r, ", ").concat(g, ", ").concat(b, ")");
-};
-
-exports.colorToString = colorToString;
-
-var colourInterpolate = function colourInterpolate(t, color1, color2) {
-  return color(interpolate(t, color1.r, color2.r), interpolate(t, color1.g, color2.g), interpolate(t, color1.b, color2.b));
-};
-
-exports.colourInterpolate = colourInterpolate;
-
-var getPointFromAngleRadius = function getPointFromAngleRadius(angle, radius) {
-  var x = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-  var y = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-  return {
-    x: x + Math.cos(angle) * radius,
-    y: y + Math.sin(angle) * radius
-  };
-};
-/**
- * Creates an array of stepped colours through an array of colours
- *
- * @param {Array.<{ r: number, g: number, b: number }>} colours
- * @param {number} granularity
- *
- * @returns {Array.<{ r: number, g: number, b: number }>}
- */
-
-
-exports.getPointFromAngleRadius = getPointFromAngleRadius;
-
-var getInterpolatedColours = function getInterpolatedColours() {
-  var colours = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
-  var granularity = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 100;
-  var colourStop = 1 / (colours.length - 1);
-  var granularityStop = 1 / granularity;
-  var colourArr = [];
-
-  for (var i = 0; i <= 1; i += granularityStop) {
-    var t = i % colourStop / colourStop;
-    var currColourIdx = Math.floor(i / colourStop);
-    colourArr.push(colourInterpolate(t, colours[currColourIdx], colours[currColourIdx + 1]));
-  }
-
-  return colourArr;
-};
-/**
- * Finds what would be the most relevant colour
- * in a colour array most likely created by
- * getInterpolatedColours
- *
- * @param {number} t
- * @param {Array.<{ r: number, g: number, b: number }>} colourArr
- *
- * @returns {{ r: number, g: number, b: number }}
- */
-
-
-exports.getInterpolatedColours = getInterpolatedColours;
-
-var getClosestColour = function getClosestColour(t, colourArr) {
-  return colourArr[Math.round((colourArr.length - 1) * t)];
-};
-
-exports.getClosestColour = getClosestColour;
 },{}],"js/utils/font.js":[function(require,module,exports) {
 "use strict";
 
@@ -21114,7 +21209,9 @@ var _GothamBold = _interopRequireDefault(require("../data/Gotham-Bold.ttf"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(source, true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(source).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
@@ -21154,7 +21251,7 @@ app.onRender(function (_ref) {
             y1 = _getPointFromAngleRad.y;
 
         ctx.beginPath();
-        ctx.strokeStyle = (0, _utils.colorToString)((0, _utils.getClosestColour)((_angle + globalAngle) % (Math.PI * 2) / (Math.PI * 2), colourArr));
+        ctx.strokeStyle = (0, _utils.colorToString)((0, _utils.getClosestColour)(_angle % (Math.PI * 2) / (Math.PI * 2), colourArr));
         ctx.moveTo(x, y);
         ctx.lineTo(x1, y1);
         ctx.stroke();
@@ -21195,7 +21292,7 @@ var angle = function angle(cx, cy, ex, ey) {
 
 (0, _font.loadFont)(_GothamBold.default).then(function (Font) {
   var path = Font.getOptimisedPath('HELLO', 100, {
-    fidelity: 5
+    fidelity: 2
   });
   path.points = path.points.map(function (shape) {
     return shape.map(function (p, index) {
@@ -21204,13 +21301,6 @@ var angle = function angle(cx, cy, ex, ey) {
           angle: 0
         });
       } else {
-        var diff = new _vector.default({
-          x: p.x,
-          y: p.y
-        }).sub({
-          x: shape[index - 1].x,
-          y: shape[index - 1].y
-        });
         return _objectSpread({}, p, {
           angle: angle(shape[index - 1].x, shape[index - 1].y, p.x, p.y)
         });
@@ -21220,7 +21310,7 @@ var angle = function angle(cx, cy, ex, ey) {
   window.path = path;
   app.start();
 });
-},{"./utils/engine":"js/utils/engine.js","./utils/font":"js/utils/font.js","./utils/utils":"js/utils/utils.js","./utils/vector":"js/utils/vector.js","../data/Gotham-Bold.ttf":"data/Gotham-Bold.ttf"}],"../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"./utils/engine":"js/utils/engine.js","./utils/font":"js/utils/font.js","./utils/utils":"js/utils/utils.js","./utils/vector":"js/utils/vector.js","../data/Gotham-Bold.ttf":"data/Gotham-Bold.ttf"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -21248,7 +21338,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "63918" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "56416" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
@@ -21423,5 +21513,5 @@ function hmrAcceptRun(bundle, id) {
     return true;
   }
 }
-},{}]},{},["../../../../../.nvm/versions/node/v9.11.2/lib/node_modules/parcel-bundler/src/builtins/hmr-runtime.js","js/script.js"], null)
+},{}]},{},["../node_modules/parcel-bundler/src/builtins/hmr-runtime.js","js/script.js"], null)
 //# sourceMappingURL=/script.d573be0b.js.map
