@@ -35758,7 +35758,1582 @@ exports.SceneUtils = SceneUtils;
 function LensFlare() {
   console.error('THREE.LensFlare has been moved to /examples/js/objects/Lensflare.js');
 }
-},{}],"../node_modules/inherits/inherits_browser.js":[function(require,module,exports) {
+},{}],"../node_modules/three/examples/jsm/controls/OrbitControls.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.MapControls = exports.OrbitControls = void 0;
+
+var _threeModule = require("../../../build/three.module.js");
+
+/**
+ * @author qiao / https://github.com/qiao
+ * @author mrdoob / http://mrdoob.com
+ * @author alteredq / http://alteredqualia.com/
+ * @author WestLangley / http://github.com/WestLangley
+ * @author erich666 / http://erichaines.com
+ * @author ScieCode / http://github.com/sciecode
+ */
+// This set of controls performs orbiting, dollying (zooming), and panning.
+// Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
+//
+//    Orbit - left mouse / touch: one-finger move
+//    Zoom - middle mouse, or mousewheel / touch: two-finger spread or squish
+//    Pan - right mouse, or left mouse + ctrl/meta/shiftKey, or arrow keys / touch: two-finger move
+var OrbitControls = function (object, domElement) {
+  this.object = object;
+  this.domElement = domElement !== undefined ? domElement : document; // Set to false to disable this control
+
+  this.enabled = true; // "target" sets the location of focus, where the object orbits around
+
+  this.target = new _threeModule.Vector3(); // How far you can dolly in and out ( PerspectiveCamera only )
+
+  this.minDistance = 0;
+  this.maxDistance = Infinity; // How far you can zoom in and out ( OrthographicCamera only )
+
+  this.minZoom = 0;
+  this.maxZoom = Infinity; // How far you can orbit vertically, upper and lower limits.
+  // Range is 0 to Math.PI radians.
+
+  this.minPolarAngle = 0; // radians
+
+  this.maxPolarAngle = Math.PI; // radians
+  // How far you can orbit horizontally, upper and lower limits.
+  // If set, must be a sub-interval of the interval [ - Math.PI, Math.PI ].
+
+  this.minAzimuthAngle = -Infinity; // radians
+
+  this.maxAzimuthAngle = Infinity; // radians
+  // Set to true to enable damping (inertia)
+  // If damping is enabled, you must call controls.update() in your animation loop
+
+  this.enableDamping = false;
+  this.dampingFactor = 0.05; // This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
+  // Set to false to disable zooming
+
+  this.enableZoom = true;
+  this.zoomSpeed = 1.0; // Set to false to disable rotating
+
+  this.enableRotate = true;
+  this.rotateSpeed = 1.0; // Set to false to disable panning
+
+  this.enablePan = true;
+  this.panSpeed = 1.0;
+  this.screenSpacePanning = false; // if true, pan in screen-space
+
+  this.keyPanSpeed = 7.0; // pixels moved per arrow key push
+  // Set to true to automatically rotate around the target
+  // If auto-rotate is enabled, you must call controls.update() in your animation loop
+
+  this.autoRotate = false;
+  this.autoRotateSpeed = 2.0; // 30 seconds per round when fps is 60
+  // Set to false to disable use of the keys
+
+  this.enableKeys = true; // The four arrow keys
+
+  this.keys = {
+    LEFT: 37,
+    UP: 38,
+    RIGHT: 39,
+    BOTTOM: 40
+  }; // Mouse buttons
+
+  this.mouseButtons = {
+    LEFT: _threeModule.MOUSE.ROTATE,
+    MIDDLE: _threeModule.MOUSE.DOLLY,
+    RIGHT: _threeModule.MOUSE.PAN
+  }; // Touch fingers
+
+  this.touches = {
+    ONE: _threeModule.TOUCH.ROTATE,
+    TWO: _threeModule.TOUCH.DOLLY_PAN
+  }; // for reset
+
+  this.target0 = this.target.clone();
+  this.position0 = this.object.position.clone();
+  this.zoom0 = this.object.zoom; //
+  // public methods
+  //
+
+  this.getPolarAngle = function () {
+    return spherical.phi;
+  };
+
+  this.getAzimuthalAngle = function () {
+    return spherical.theta;
+  };
+
+  this.saveState = function () {
+    scope.target0.copy(scope.target);
+    scope.position0.copy(scope.object.position);
+    scope.zoom0 = scope.object.zoom;
+  };
+
+  this.reset = function () {
+    scope.target.copy(scope.target0);
+    scope.object.position.copy(scope.position0);
+    scope.object.zoom = scope.zoom0;
+    scope.object.updateProjectionMatrix();
+    scope.dispatchEvent(changeEvent);
+    scope.update();
+    state = STATE.NONE;
+  }; // this method is exposed, but perhaps it would be better if we can make it private...
+
+
+  this.update = function () {
+    var offset = new _threeModule.Vector3(); // so camera.up is the orbit axis
+
+    var quat = new _threeModule.Quaternion().setFromUnitVectors(object.up, new _threeModule.Vector3(0, 1, 0));
+    var quatInverse = quat.clone().inverse();
+    var lastPosition = new _threeModule.Vector3();
+    var lastQuaternion = new _threeModule.Quaternion();
+    return function update() {
+      var position = scope.object.position;
+      offset.copy(position).sub(scope.target); // rotate offset to "y-axis-is-up" space
+
+      offset.applyQuaternion(quat); // angle from z-axis around y-axis
+
+      spherical.setFromVector3(offset);
+
+      if (scope.autoRotate && state === STATE.NONE) {
+        rotateLeft(getAutoRotationAngle());
+      }
+
+      if (scope.enableDamping) {
+        spherical.theta += sphericalDelta.theta * scope.dampingFactor;
+        spherical.phi += sphericalDelta.phi * scope.dampingFactor;
+      } else {
+        spherical.theta += sphericalDelta.theta;
+        spherical.phi += sphericalDelta.phi;
+      } // restrict theta to be between desired limits
+
+
+      spherical.theta = Math.max(scope.minAzimuthAngle, Math.min(scope.maxAzimuthAngle, spherical.theta)); // restrict phi to be between desired limits
+
+      spherical.phi = Math.max(scope.minPolarAngle, Math.min(scope.maxPolarAngle, spherical.phi));
+      spherical.makeSafe();
+      spherical.radius *= scale; // restrict radius to be between desired limits
+
+      spherical.radius = Math.max(scope.minDistance, Math.min(scope.maxDistance, spherical.radius)); // move target to panned location
+
+      if (scope.enableDamping === true) {
+        scope.target.addScaledVector(panOffset, scope.dampingFactor);
+      } else {
+        scope.target.add(panOffset);
+      }
+
+      offset.setFromSpherical(spherical); // rotate offset back to "camera-up-vector-is-up" space
+
+      offset.applyQuaternion(quatInverse);
+      position.copy(scope.target).add(offset);
+      scope.object.lookAt(scope.target);
+
+      if (scope.enableDamping === true) {
+        sphericalDelta.theta *= 1 - scope.dampingFactor;
+        sphericalDelta.phi *= 1 - scope.dampingFactor;
+        panOffset.multiplyScalar(1 - scope.dampingFactor);
+      } else {
+        sphericalDelta.set(0, 0, 0);
+        panOffset.set(0, 0, 0);
+      }
+
+      scale = 1; // update condition is:
+      // min(camera displacement, camera rotation in radians)^2 > EPS
+      // using small-angle approximation cos(x/2) = 1 - x^2 / 8
+
+      if (zoomChanged || lastPosition.distanceToSquared(scope.object.position) > EPS || 8 * (1 - lastQuaternion.dot(scope.object.quaternion)) > EPS) {
+        scope.dispatchEvent(changeEvent);
+        lastPosition.copy(scope.object.position);
+        lastQuaternion.copy(scope.object.quaternion);
+        zoomChanged = false;
+        return true;
+      }
+
+      return false;
+    };
+  }();
+
+  this.dispose = function () {
+    scope.domElement.removeEventListener('contextmenu', onContextMenu, false);
+    scope.domElement.removeEventListener('mousedown', onMouseDown, false);
+    scope.domElement.removeEventListener('wheel', onMouseWheel, false);
+    scope.domElement.removeEventListener('touchstart', onTouchStart, false);
+    scope.domElement.removeEventListener('touchend', onTouchEnd, false);
+    scope.domElement.removeEventListener('touchmove', onTouchMove, false);
+    document.removeEventListener('mousemove', onMouseMove, false);
+    document.removeEventListener('mouseup', onMouseUp, false);
+    window.removeEventListener('keydown', onKeyDown, false); //scope.dispatchEvent( { type: 'dispose' } ); // should this be added here?
+  }; //
+  // internals
+  //
+
+
+  var scope = this;
+  var changeEvent = {
+    type: 'change'
+  };
+  var startEvent = {
+    type: 'start'
+  };
+  var endEvent = {
+    type: 'end'
+  };
+  var STATE = {
+    NONE: -1,
+    ROTATE: 0,
+    DOLLY: 1,
+    PAN: 2,
+    TOUCH_ROTATE: 3,
+    TOUCH_PAN: 4,
+    TOUCH_DOLLY_PAN: 5,
+    TOUCH_DOLLY_ROTATE: 6
+  };
+  var state = STATE.NONE;
+  var EPS = 0.000001; // current position in spherical coordinates
+
+  var spherical = new _threeModule.Spherical();
+  var sphericalDelta = new _threeModule.Spherical();
+  var scale = 1;
+  var panOffset = new _threeModule.Vector3();
+  var zoomChanged = false;
+  var rotateStart = new _threeModule.Vector2();
+  var rotateEnd = new _threeModule.Vector2();
+  var rotateDelta = new _threeModule.Vector2();
+  var panStart = new _threeModule.Vector2();
+  var panEnd = new _threeModule.Vector2();
+  var panDelta = new _threeModule.Vector2();
+  var dollyStart = new _threeModule.Vector2();
+  var dollyEnd = new _threeModule.Vector2();
+  var dollyDelta = new _threeModule.Vector2();
+
+  function getAutoRotationAngle() {
+    return 2 * Math.PI / 60 / 60 * scope.autoRotateSpeed;
+  }
+
+  function getZoomScale() {
+    return Math.pow(0.95, scope.zoomSpeed);
+  }
+
+  function rotateLeft(angle) {
+    sphericalDelta.theta -= angle;
+  }
+
+  function rotateUp(angle) {
+    sphericalDelta.phi -= angle;
+  }
+
+  var panLeft = function () {
+    var v = new _threeModule.Vector3();
+    return function panLeft(distance, objectMatrix) {
+      v.setFromMatrixColumn(objectMatrix, 0); // get X column of objectMatrix
+
+      v.multiplyScalar(-distance);
+      panOffset.add(v);
+    };
+  }();
+
+  var panUp = function () {
+    var v = new _threeModule.Vector3();
+    return function panUp(distance, objectMatrix) {
+      if (scope.screenSpacePanning === true) {
+        v.setFromMatrixColumn(objectMatrix, 1);
+      } else {
+        v.setFromMatrixColumn(objectMatrix, 0);
+        v.crossVectors(scope.object.up, v);
+      }
+
+      v.multiplyScalar(distance);
+      panOffset.add(v);
+    };
+  }(); // deltaX and deltaY are in pixels; right and down are positive
+
+
+  var pan = function () {
+    var offset = new _threeModule.Vector3();
+    return function pan(deltaX, deltaY) {
+      var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
+
+      if (scope.object.isPerspectiveCamera) {
+        // perspective
+        var position = scope.object.position;
+        offset.copy(position).sub(scope.target);
+        var targetDistance = offset.length(); // half of the fov is center to top of screen
+
+        targetDistance *= Math.tan(scope.object.fov / 2 * Math.PI / 180.0); // we use only clientHeight here so aspect ratio does not distort speed
+
+        panLeft(2 * deltaX * targetDistance / element.clientHeight, scope.object.matrix);
+        panUp(2 * deltaY * targetDistance / element.clientHeight, scope.object.matrix);
+      } else if (scope.object.isOrthographicCamera) {
+        // orthographic
+        panLeft(deltaX * (scope.object.right - scope.object.left) / scope.object.zoom / element.clientWidth, scope.object.matrix);
+        panUp(deltaY * (scope.object.top - scope.object.bottom) / scope.object.zoom / element.clientHeight, scope.object.matrix);
+      } else {
+        // camera neither orthographic nor perspective
+        console.warn('WARNING: OrbitControls.js encountered an unknown camera type - pan disabled.');
+        scope.enablePan = false;
+      }
+    };
+  }();
+
+  function dollyIn(dollyScale) {
+    if (scope.object.isPerspectiveCamera) {
+      scale /= dollyScale;
+    } else if (scope.object.isOrthographicCamera) {
+      scope.object.zoom = Math.max(scope.minZoom, Math.min(scope.maxZoom, scope.object.zoom * dollyScale));
+      scope.object.updateProjectionMatrix();
+      zoomChanged = true;
+    } else {
+      console.warn('WARNING: OrbitControls.js encountered an unknown camera type - dolly/zoom disabled.');
+      scope.enableZoom = false;
+    }
+  }
+
+  function dollyOut(dollyScale) {
+    if (scope.object.isPerspectiveCamera) {
+      scale *= dollyScale;
+    } else if (scope.object.isOrthographicCamera) {
+      scope.object.zoom = Math.max(scope.minZoom, Math.min(scope.maxZoom, scope.object.zoom / dollyScale));
+      scope.object.updateProjectionMatrix();
+      zoomChanged = true;
+    } else {
+      console.warn('WARNING: OrbitControls.js encountered an unknown camera type - dolly/zoom disabled.');
+      scope.enableZoom = false;
+    }
+  } //
+  // event callbacks - update the object state
+  //
+
+
+  function handleMouseDownRotate(event) {
+    rotateStart.set(event.clientX, event.clientY);
+  }
+
+  function handleMouseDownDolly(event) {
+    dollyStart.set(event.clientX, event.clientY);
+  }
+
+  function handleMouseDownPan(event) {
+    panStart.set(event.clientX, event.clientY);
+  }
+
+  function handleMouseMoveRotate(event) {
+    rotateEnd.set(event.clientX, event.clientY);
+    rotateDelta.subVectors(rotateEnd, rotateStart).multiplyScalar(scope.rotateSpeed);
+    var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
+    rotateLeft(2 * Math.PI * rotateDelta.x / element.clientHeight); // yes, height
+
+    rotateUp(2 * Math.PI * rotateDelta.y / element.clientHeight);
+    rotateStart.copy(rotateEnd);
+    scope.update();
+  }
+
+  function handleMouseMoveDolly(event) {
+    dollyEnd.set(event.clientX, event.clientY);
+    dollyDelta.subVectors(dollyEnd, dollyStart);
+
+    if (dollyDelta.y > 0) {
+      dollyIn(getZoomScale());
+    } else if (dollyDelta.y < 0) {
+      dollyOut(getZoomScale());
+    }
+
+    dollyStart.copy(dollyEnd);
+    scope.update();
+  }
+
+  function handleMouseMovePan(event) {
+    panEnd.set(event.clientX, event.clientY);
+    panDelta.subVectors(panEnd, panStart).multiplyScalar(scope.panSpeed);
+    pan(panDelta.x, panDelta.y);
+    panStart.copy(panEnd);
+    scope.update();
+  }
+
+  function handleMouseUp()
+  /*event*/
+  {// no-op
+  }
+
+  function handleMouseWheel(event) {
+    if (event.deltaY < 0) {
+      dollyOut(getZoomScale());
+    } else if (event.deltaY > 0) {
+      dollyIn(getZoomScale());
+    }
+
+    scope.update();
+  }
+
+  function handleKeyDown(event) {
+    var needsUpdate = false;
+
+    switch (event.keyCode) {
+      case scope.keys.UP:
+        pan(0, scope.keyPanSpeed);
+        needsUpdate = true;
+        break;
+
+      case scope.keys.BOTTOM:
+        pan(0, -scope.keyPanSpeed);
+        needsUpdate = true;
+        break;
+
+      case scope.keys.LEFT:
+        pan(scope.keyPanSpeed, 0);
+        needsUpdate = true;
+        break;
+
+      case scope.keys.RIGHT:
+        pan(-scope.keyPanSpeed, 0);
+        needsUpdate = true;
+        break;
+    }
+
+    if (needsUpdate) {
+      // prevent the browser from scrolling on cursor keys
+      event.preventDefault();
+      scope.update();
+    }
+  }
+
+  function handleTouchStartRotate(event) {
+    if (event.touches.length == 1) {
+      rotateStart.set(event.touches[0].pageX, event.touches[0].pageY);
+    } else {
+      var x = 0.5 * (event.touches[0].pageX + event.touches[1].pageX);
+      var y = 0.5 * (event.touches[0].pageY + event.touches[1].pageY);
+      rotateStart.set(x, y);
+    }
+  }
+
+  function handleTouchStartPan(event) {
+    if (event.touches.length == 1) {
+      panStart.set(event.touches[0].pageX, event.touches[0].pageY);
+    } else {
+      var x = 0.5 * (event.touches[0].pageX + event.touches[1].pageX);
+      var y = 0.5 * (event.touches[0].pageY + event.touches[1].pageY);
+      panStart.set(x, y);
+    }
+  }
+
+  function handleTouchStartDolly(event) {
+    var dx = event.touches[0].pageX - event.touches[1].pageX;
+    var dy = event.touches[0].pageY - event.touches[1].pageY;
+    var distance = Math.sqrt(dx * dx + dy * dy);
+    dollyStart.set(0, distance);
+  }
+
+  function handleTouchStartDollyPan(event) {
+    if (scope.enableZoom) handleTouchStartDolly(event);
+    if (scope.enablePan) handleTouchStartPan(event);
+  }
+
+  function handleTouchStartDollyRotate(event) {
+    if (scope.enableZoom) handleTouchStartDolly(event);
+    if (scope.enableRotate) handleTouchStartRotate(event);
+  }
+
+  function handleTouchMoveRotate(event) {
+    if (event.touches.length == 1) {
+      rotateEnd.set(event.touches[0].pageX, event.touches[0].pageY);
+    } else {
+      var x = 0.5 * (event.touches[0].pageX + event.touches[1].pageX);
+      var y = 0.5 * (event.touches[0].pageY + event.touches[1].pageY);
+      rotateEnd.set(x, y);
+    }
+
+    rotateDelta.subVectors(rotateEnd, rotateStart).multiplyScalar(scope.rotateSpeed);
+    var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
+    rotateLeft(2 * Math.PI * rotateDelta.x / element.clientHeight); // yes, height
+
+    rotateUp(2 * Math.PI * rotateDelta.y / element.clientHeight);
+    rotateStart.copy(rotateEnd);
+  }
+
+  function handleTouchMovePan(event) {
+    if (event.touches.length == 1) {
+      panEnd.set(event.touches[0].pageX, event.touches[0].pageY);
+    } else {
+      var x = 0.5 * (event.touches[0].pageX + event.touches[1].pageX);
+      var y = 0.5 * (event.touches[0].pageY + event.touches[1].pageY);
+      panEnd.set(x, y);
+    }
+
+    panDelta.subVectors(panEnd, panStart).multiplyScalar(scope.panSpeed);
+    pan(panDelta.x, panDelta.y);
+    panStart.copy(panEnd);
+  }
+
+  function handleTouchMoveDolly(event) {
+    var dx = event.touches[0].pageX - event.touches[1].pageX;
+    var dy = event.touches[0].pageY - event.touches[1].pageY;
+    var distance = Math.sqrt(dx * dx + dy * dy);
+    dollyEnd.set(0, distance);
+    dollyDelta.set(0, Math.pow(dollyEnd.y / dollyStart.y, scope.zoomSpeed));
+    dollyIn(dollyDelta.y);
+    dollyStart.copy(dollyEnd);
+  }
+
+  function handleTouchMoveDollyPan(event) {
+    if (scope.enableZoom) handleTouchMoveDolly(event);
+    if (scope.enablePan) handleTouchMovePan(event);
+  }
+
+  function handleTouchMoveDollyRotate(event) {
+    if (scope.enableZoom) handleTouchMoveDolly(event);
+    if (scope.enableRotate) handleTouchMoveRotate(event);
+  }
+
+  function handleTouchEnd()
+  /*event*/
+  {} // no-op
+  //
+  // event handlers - FSM: listen for events and reset state
+  //
+
+
+  function onMouseDown(event) {
+    if (scope.enabled === false) return; // Prevent the browser from scrolling.
+
+    event.preventDefault(); // Manually set the focus since calling preventDefault above
+    // prevents the browser from setting it automatically.
+
+    scope.domElement.focus ? scope.domElement.focus() : window.focus();
+
+    switch (event.button) {
+      case 0:
+        switch (scope.mouseButtons.LEFT) {
+          case _threeModule.MOUSE.ROTATE:
+            if (event.ctrlKey || event.metaKey || event.shiftKey) {
+              if (scope.enablePan === false) return;
+              handleMouseDownPan(event);
+              state = STATE.PAN;
+            } else {
+              if (scope.enableRotate === false) return;
+              handleMouseDownRotate(event);
+              state = STATE.ROTATE;
+            }
+
+            break;
+
+          case _threeModule.MOUSE.PAN:
+            if (event.ctrlKey || event.metaKey || event.shiftKey) {
+              if (scope.enableRotate === false) return;
+              handleMouseDownRotate(event);
+              state = STATE.ROTATE;
+            } else {
+              if (scope.enablePan === false) return;
+              handleMouseDownPan(event);
+              state = STATE.PAN;
+            }
+
+            break;
+
+          default:
+            state = STATE.NONE;
+        }
+
+        break;
+
+      case 1:
+        switch (scope.mouseButtons.MIDDLE) {
+          case _threeModule.MOUSE.DOLLY:
+            if (scope.enableZoom === false) return;
+            handleMouseDownDolly(event);
+            state = STATE.DOLLY;
+            break;
+
+          default:
+            state = STATE.NONE;
+        }
+
+        break;
+
+      case 2:
+        switch (scope.mouseButtons.RIGHT) {
+          case _threeModule.MOUSE.ROTATE:
+            if (scope.enableRotate === false) return;
+            handleMouseDownRotate(event);
+            state = STATE.ROTATE;
+            break;
+
+          case _threeModule.MOUSE.PAN:
+            if (scope.enablePan === false) return;
+            handleMouseDownPan(event);
+            state = STATE.PAN;
+            break;
+
+          default:
+            state = STATE.NONE;
+        }
+
+        break;
+    }
+
+    if (state !== STATE.NONE) {
+      document.addEventListener('mousemove', onMouseMove, false);
+      document.addEventListener('mouseup', onMouseUp, false);
+      scope.dispatchEvent(startEvent);
+    }
+  }
+
+  function onMouseMove(event) {
+    if (scope.enabled === false) return;
+    event.preventDefault();
+
+    switch (state) {
+      case STATE.ROTATE:
+        if (scope.enableRotate === false) return;
+        handleMouseMoveRotate(event);
+        break;
+
+      case STATE.DOLLY:
+        if (scope.enableZoom === false) return;
+        handleMouseMoveDolly(event);
+        break;
+
+      case STATE.PAN:
+        if (scope.enablePan === false) return;
+        handleMouseMovePan(event);
+        break;
+    }
+  }
+
+  function onMouseUp(event) {
+    if (scope.enabled === false) return;
+    handleMouseUp(event);
+    document.removeEventListener('mousemove', onMouseMove, false);
+    document.removeEventListener('mouseup', onMouseUp, false);
+    scope.dispatchEvent(endEvent);
+    state = STATE.NONE;
+  }
+
+  function onMouseWheel(event) {
+    if (scope.enabled === false || scope.enableZoom === false || state !== STATE.NONE && state !== STATE.ROTATE) return;
+    event.preventDefault();
+    event.stopPropagation();
+    scope.dispatchEvent(startEvent);
+    handleMouseWheel(event);
+    scope.dispatchEvent(endEvent);
+  }
+
+  function onKeyDown(event) {
+    if (scope.enabled === false || scope.enableKeys === false || scope.enablePan === false) return;
+    handleKeyDown(event);
+  }
+
+  function onTouchStart(event) {
+    if (scope.enabled === false) return;
+    event.preventDefault();
+
+    switch (event.touches.length) {
+      case 1:
+        switch (scope.touches.ONE) {
+          case _threeModule.TOUCH.ROTATE:
+            if (scope.enableRotate === false) return;
+            handleTouchStartRotate(event);
+            state = STATE.TOUCH_ROTATE;
+            break;
+
+          case _threeModule.TOUCH.PAN:
+            if (scope.enablePan === false) return;
+            handleTouchStartPan(event);
+            state = STATE.TOUCH_PAN;
+            break;
+
+          default:
+            state = STATE.NONE;
+        }
+
+        break;
+
+      case 2:
+        switch (scope.touches.TWO) {
+          case _threeModule.TOUCH.DOLLY_PAN:
+            if (scope.enableZoom === false && scope.enablePan === false) return;
+            handleTouchStartDollyPan(event);
+            state = STATE.TOUCH_DOLLY_PAN;
+            break;
+
+          case _threeModule.TOUCH.DOLLY_ROTATE:
+            if (scope.enableZoom === false && scope.enableRotate === false) return;
+            handleTouchStartDollyRotate(event);
+            state = STATE.TOUCH_DOLLY_ROTATE;
+            break;
+
+          default:
+            state = STATE.NONE;
+        }
+
+        break;
+
+      default:
+        state = STATE.NONE;
+    }
+
+    if (state !== STATE.NONE) {
+      scope.dispatchEvent(startEvent);
+    }
+  }
+
+  function onTouchMove(event) {
+    if (scope.enabled === false) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    switch (state) {
+      case STATE.TOUCH_ROTATE:
+        if (scope.enableRotate === false) return;
+        handleTouchMoveRotate(event);
+        scope.update();
+        break;
+
+      case STATE.TOUCH_PAN:
+        if (scope.enablePan === false) return;
+        handleTouchMovePan(event);
+        scope.update();
+        break;
+
+      case STATE.TOUCH_DOLLY_PAN:
+        if (scope.enableZoom === false && scope.enablePan === false) return;
+        handleTouchMoveDollyPan(event);
+        scope.update();
+        break;
+
+      case STATE.TOUCH_DOLLY_ROTATE:
+        if (scope.enableZoom === false && scope.enableRotate === false) return;
+        handleTouchMoveDollyRotate(event);
+        scope.update();
+        break;
+
+      default:
+        state = STATE.NONE;
+    }
+  }
+
+  function onTouchEnd(event) {
+    if (scope.enabled === false) return;
+    handleTouchEnd(event);
+    scope.dispatchEvent(endEvent);
+    state = STATE.NONE;
+  }
+
+  function onContextMenu(event) {
+    if (scope.enabled === false) return;
+    event.preventDefault();
+  } //
+
+
+  scope.domElement.addEventListener('contextmenu', onContextMenu, false);
+  scope.domElement.addEventListener('mousedown', onMouseDown, false);
+  scope.domElement.addEventListener('wheel', onMouseWheel, false);
+  scope.domElement.addEventListener('touchstart', onTouchStart, false);
+  scope.domElement.addEventListener('touchend', onTouchEnd, false);
+  scope.domElement.addEventListener('touchmove', onTouchMove, false);
+  window.addEventListener('keydown', onKeyDown, false); // force an update at start
+
+  this.update();
+};
+
+exports.OrbitControls = OrbitControls;
+OrbitControls.prototype = Object.create(_threeModule.EventDispatcher.prototype);
+OrbitControls.prototype.constructor = OrbitControls; // This set of controls performs orbiting, dollying (zooming), and panning.
+// Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
+// This is very similar to OrbitControls, another set of touch behavior
+//
+//    Orbit - right mouse, or left mouse + ctrl/meta/shiftKey / touch: two-finger rotate
+//    Zoom - middle mouse, or mousewheel / touch: two-finger spread or squish
+//    Pan - left mouse, or arrow keys / touch: one-finger move
+
+var MapControls = function (object, domElement) {
+  OrbitControls.call(this, object, domElement);
+  this.mouseButtons.LEFT = _threeModule.MOUSE.PAN;
+  this.mouseButtons.RIGHT = _threeModule.MOUSE.ROTATE;
+  this.touches.ONE = _threeModule.TOUCH.PAN;
+  this.touches.TWO = _threeModule.TOUCH.DOLLY_ROTATE;
+};
+
+exports.MapControls = MapControls;
+MapControls.prototype = Object.create(_threeModule.EventDispatcher.prototype);
+MapControls.prototype.constructor = MapControls;
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js"}],"../node_modules/three/examples/jsm/shaders/CopyShader.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.CopyShader = void 0;
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ *
+ * Full-screen textured quad shader
+ */
+var CopyShader = {
+  uniforms: {
+    "tDiffuse": {
+      value: null
+    },
+    "opacity": {
+      value: 1.0
+    }
+  },
+  vertexShader: ["varying vec2 vUv;", "void main() {", "vUv = uv;", "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );", "}"].join("\n"),
+  fragmentShader: ["uniform float opacity;", "uniform sampler2D tDiffuse;", "varying vec2 vUv;", "void main() {", "vec4 texel = texture2D( tDiffuse, vUv );", "gl_FragColor = opacity * texel;", "}"].join("\n")
+};
+exports.CopyShader = CopyShader;
+},{}],"../node_modules/three/examples/jsm/postprocessing/Pass.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Pass = Pass;
+
+var _threeModule = require("../../../build/three.module.js");
+
+function Pass() {
+  // if set to true, the pass is processed by the composer
+  this.enabled = true; // if set to true, the pass indicates to swap read and write buffer after rendering
+
+  this.needsSwap = true; // if set to true, the pass clears its buffer before rendering
+
+  this.clear = false; // if set to true, the result of the pass is rendered to screen. This is set automatically by EffectComposer.
+
+  this.renderToScreen = false;
+}
+
+Object.assign(Pass.prototype, {
+  setSize: function ()
+  /* width, height */
+  {},
+  render: function ()
+  /* renderer, writeBuffer, readBuffer, deltaTime, maskActive */
+  {
+    console.error('THREE.Pass: .render() must be implemented in derived pass.');
+  }
+}); // Helper for passes that need to fill the viewport with a single quad.
+
+Pass.FullScreenQuad = function () {
+  var camera = new _threeModule.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  var geometry = new _threeModule.PlaneBufferGeometry(2, 2);
+
+  var FullScreenQuad = function (material) {
+    this._mesh = new _threeModule.Mesh(geometry, material);
+  };
+
+  Object.defineProperty(FullScreenQuad.prototype, 'material', {
+    get: function () {
+      return this._mesh.material;
+    },
+    set: function (value) {
+      this._mesh.material = value;
+    }
+  });
+  Object.assign(FullScreenQuad.prototype, {
+    render: function (renderer) {
+      renderer.render(this._mesh, camera);
+    }
+  });
+  return FullScreenQuad;
+}();
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js"}],"../node_modules/three/examples/jsm/postprocessing/ShaderPass.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.ShaderPass = void 0;
+
+var _threeModule = require("../../../build/three.module.js");
+
+var _Pass = require("../postprocessing/Pass.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ */
+var ShaderPass = function (shader, textureID) {
+  _Pass.Pass.call(this);
+
+  this.textureID = textureID !== undefined ? textureID : "tDiffuse";
+
+  if (shader instanceof _threeModule.ShaderMaterial) {
+    this.uniforms = shader.uniforms;
+    this.material = shader;
+  } else if (shader) {
+    this.uniforms = _threeModule.UniformsUtils.clone(shader.uniforms);
+    this.material = new _threeModule.ShaderMaterial({
+      defines: Object.assign({}, shader.defines),
+      uniforms: this.uniforms,
+      vertexShader: shader.vertexShader,
+      fragmentShader: shader.fragmentShader
+    });
+  }
+
+  this.fsQuad = new _Pass.Pass.FullScreenQuad(this.material);
+};
+
+exports.ShaderPass = ShaderPass;
+ShaderPass.prototype = Object.assign(Object.create(_Pass.Pass.prototype), {
+  constructor: ShaderPass,
+  render: function (renderer, writeBuffer, readBuffer
+  /*, deltaTime, maskActive */
+  ) {
+    if (this.uniforms[this.textureID]) {
+      this.uniforms[this.textureID].value = readBuffer.texture;
+    }
+
+    this.fsQuad.material = this.material;
+
+    if (this.renderToScreen) {
+      renderer.setRenderTarget(null);
+      this.fsQuad.render(renderer);
+    } else {
+      renderer.setRenderTarget(writeBuffer); // TODO: Avoid using autoClear properties, see https://github.com/mrdoob/three.js/pull/15571#issuecomment-465669600
+
+      if (this.clear) renderer.clear(renderer.autoClearColor, renderer.autoClearDepth, renderer.autoClearStencil);
+      this.fsQuad.render(renderer);
+    }
+  }
+});
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js","../postprocessing/Pass.js":"../node_modules/three/examples/jsm/postprocessing/Pass.js"}],"../node_modules/three/examples/jsm/postprocessing/MaskPass.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.ClearMaskPass = exports.MaskPass = void 0;
+
+var _Pass = require("../postprocessing/Pass.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ */
+var MaskPass = function (scene, camera) {
+  _Pass.Pass.call(this);
+
+  this.scene = scene;
+  this.camera = camera;
+  this.clear = true;
+  this.needsSwap = false;
+  this.inverse = false;
+};
+
+exports.MaskPass = MaskPass;
+MaskPass.prototype = Object.assign(Object.create(_Pass.Pass.prototype), {
+  constructor: MaskPass,
+  render: function (renderer, writeBuffer, readBuffer
+  /*, deltaTime, maskActive */
+  ) {
+    var context = renderer.getContext();
+    var state = renderer.state; // don't update color or depth
+
+    state.buffers.color.setMask(false);
+    state.buffers.depth.setMask(false); // lock buffers
+
+    state.buffers.color.setLocked(true);
+    state.buffers.depth.setLocked(true); // set up stencil
+
+    var writeValue, clearValue;
+
+    if (this.inverse) {
+      writeValue = 0;
+      clearValue = 1;
+    } else {
+      writeValue = 1;
+      clearValue = 0;
+    }
+
+    state.buffers.stencil.setTest(true);
+    state.buffers.stencil.setOp(context.REPLACE, context.REPLACE, context.REPLACE);
+    state.buffers.stencil.setFunc(context.ALWAYS, writeValue, 0xffffffff);
+    state.buffers.stencil.setClear(clearValue);
+    state.buffers.stencil.setLocked(true); // draw into the stencil buffer
+
+    renderer.setRenderTarget(readBuffer);
+    if (this.clear) renderer.clear();
+    renderer.render(this.scene, this.camera);
+    renderer.setRenderTarget(writeBuffer);
+    if (this.clear) renderer.clear();
+    renderer.render(this.scene, this.camera); // unlock color and depth buffer for subsequent rendering
+
+    state.buffers.color.setLocked(false);
+    state.buffers.depth.setLocked(false); // only render where stencil is set to 1
+
+    state.buffers.stencil.setLocked(false);
+    state.buffers.stencil.setFunc(context.EQUAL, 1, 0xffffffff); // draw if == 1
+
+    state.buffers.stencil.setOp(context.KEEP, context.KEEP, context.KEEP);
+    state.buffers.stencil.setLocked(true);
+  }
+});
+
+var ClearMaskPass = function () {
+  _Pass.Pass.call(this);
+
+  this.needsSwap = false;
+};
+
+exports.ClearMaskPass = ClearMaskPass;
+ClearMaskPass.prototype = Object.create(_Pass.Pass.prototype);
+Object.assign(ClearMaskPass.prototype, {
+  render: function (renderer
+  /*, writeBuffer, readBuffer, deltaTime, maskActive */
+  ) {
+    renderer.state.buffers.stencil.setLocked(false);
+    renderer.state.buffers.stencil.setTest(false);
+  }
+});
+},{"../postprocessing/Pass.js":"../node_modules/three/examples/jsm/postprocessing/Pass.js"}],"../node_modules/three/examples/jsm/postprocessing/EffectComposer.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Pass = exports.EffectComposer = void 0;
+
+var _threeModule = require("../../../build/three.module.js");
+
+var _CopyShader = require("../shaders/CopyShader.js");
+
+var _ShaderPass = require("../postprocessing/ShaderPass.js");
+
+var _MaskPass = require("../postprocessing/MaskPass.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ */
+var EffectComposer = function (renderer, renderTarget) {
+  this.renderer = renderer;
+
+  if (renderTarget === undefined) {
+    var parameters = {
+      minFilter: _threeModule.LinearFilter,
+      magFilter: _threeModule.LinearFilter,
+      format: _threeModule.RGBAFormat,
+      stencilBuffer: false
+    };
+    var size = renderer.getSize(new _threeModule.Vector2());
+    this._pixelRatio = renderer.getPixelRatio();
+    this._width = size.width;
+    this._height = size.height;
+    renderTarget = new _threeModule.WebGLRenderTarget(this._width * this._pixelRatio, this._height * this._pixelRatio, parameters);
+    renderTarget.texture.name = 'EffectComposer.rt1';
+  } else {
+    this._pixelRatio = 1;
+    this._width = renderTarget.width;
+    this._height = renderTarget.height;
+  }
+
+  this.renderTarget1 = renderTarget;
+  this.renderTarget2 = renderTarget.clone();
+  this.renderTarget2.texture.name = 'EffectComposer.rt2';
+  this.writeBuffer = this.renderTarget1;
+  this.readBuffer = this.renderTarget2;
+  this.renderToScreen = true;
+  this.passes = []; // dependencies
+
+  if (_CopyShader.CopyShader === undefined) {
+    console.error('THREE.EffectComposer relies on CopyShader');
+  }
+
+  if (_ShaderPass.ShaderPass === undefined) {
+    console.error('THREE.EffectComposer relies on ShaderPass');
+  }
+
+  this.copyPass = new _ShaderPass.ShaderPass(_CopyShader.CopyShader);
+  this.clock = new _threeModule.Clock();
+};
+
+exports.EffectComposer = EffectComposer;
+Object.assign(EffectComposer.prototype, {
+  swapBuffers: function () {
+    var tmp = this.readBuffer;
+    this.readBuffer = this.writeBuffer;
+    this.writeBuffer = tmp;
+  },
+  addPass: function (pass) {
+    this.passes.push(pass);
+    pass.setSize(this._width * this._pixelRatio, this._height * this._pixelRatio);
+  },
+  insertPass: function (pass, index) {
+    this.passes.splice(index, 0, pass);
+  },
+  isLastEnabledPass: function (passIndex) {
+    for (var i = passIndex + 1; i < this.passes.length; i++) {
+      if (this.passes[i].enabled) {
+        return false;
+      }
+    }
+
+    return true;
+  },
+  render: function (deltaTime) {
+    // deltaTime value is in seconds
+    if (deltaTime === undefined) {
+      deltaTime = this.clock.getDelta();
+    }
+
+    var currentRenderTarget = this.renderer.getRenderTarget();
+    var maskActive = false;
+    var pass,
+        i,
+        il = this.passes.length;
+
+    for (i = 0; i < il; i++) {
+      pass = this.passes[i];
+      if (pass.enabled === false) continue;
+      pass.renderToScreen = this.renderToScreen && this.isLastEnabledPass(i);
+      pass.render(this.renderer, this.writeBuffer, this.readBuffer, deltaTime, maskActive);
+
+      if (pass.needsSwap) {
+        if (maskActive) {
+          var context = this.renderer.getContext();
+          var stencil = this.renderer.state.buffers.stencil; //context.stencilFunc( context.NOTEQUAL, 1, 0xffffffff );
+
+          stencil.setFunc(context.NOTEQUAL, 1, 0xffffffff);
+          this.copyPass.render(this.renderer, this.writeBuffer, this.readBuffer, deltaTime); //context.stencilFunc( context.EQUAL, 1, 0xffffffff );
+
+          stencil.setFunc(context.EQUAL, 1, 0xffffffff);
+        }
+
+        this.swapBuffers();
+      }
+
+      if (_MaskPass.MaskPass !== undefined) {
+        if (pass instanceof _MaskPass.MaskPass) {
+          maskActive = true;
+        } else if (pass instanceof _MaskPass.ClearMaskPass) {
+          maskActive = false;
+        }
+      }
+    }
+
+    this.renderer.setRenderTarget(currentRenderTarget);
+  },
+  reset: function (renderTarget) {
+    if (renderTarget === undefined) {
+      var size = this.renderer.getSize(new _threeModule.Vector2());
+      this._pixelRatio = this.renderer.getPixelRatio();
+      this._width = size.width;
+      this._height = size.height;
+      renderTarget = this.renderTarget1.clone();
+      renderTarget.setSize(this._width * this._pixelRatio, this._height * this._pixelRatio);
+    }
+
+    this.renderTarget1.dispose();
+    this.renderTarget2.dispose();
+    this.renderTarget1 = renderTarget;
+    this.renderTarget2 = renderTarget.clone();
+    this.writeBuffer = this.renderTarget1;
+    this.readBuffer = this.renderTarget2;
+  },
+  setSize: function (width, height) {
+    this._width = width;
+    this._height = height;
+    var effectiveWidth = this._width * this._pixelRatio;
+    var effectiveHeight = this._height * this._pixelRatio;
+    this.renderTarget1.setSize(effectiveWidth, effectiveHeight);
+    this.renderTarget2.setSize(effectiveWidth, effectiveHeight);
+
+    for (var i = 0; i < this.passes.length; i++) {
+      this.passes[i].setSize(effectiveWidth, effectiveHeight);
+    }
+  },
+  setPixelRatio: function (pixelRatio) {
+    this._pixelRatio = pixelRatio;
+    this.setSize(this._width, this._height);
+  }
+});
+
+var Pass = function () {
+  // if set to true, the pass is processed by the composer
+  this.enabled = true; // if set to true, the pass indicates to swap read and write buffer after rendering
+
+  this.needsSwap = true; // if set to true, the pass clears its buffer before rendering
+
+  this.clear = false; // if set to true, the result of the pass is rendered to screen. This is set automatically by EffectComposer.
+
+  this.renderToScreen = false;
+};
+
+exports.Pass = Pass;
+Object.assign(Pass.prototype, {
+  setSize: function ()
+  /* width, height */
+  {},
+  render: function ()
+  /* renderer, writeBuffer, readBuffer, deltaTime, maskActive */
+  {
+    console.error('THREE.Pass: .render() must be implemented in derived pass.');
+  }
+}); // Helper for passes that need to fill the viewport with a single quad.
+
+Pass.FullScreenQuad = function () {
+  var camera = new _threeModule.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  var geometry = new _threeModule.PlaneBufferGeometry(2, 2);
+
+  var FullScreenQuad = function (material) {
+    this._mesh = new _threeModule.Mesh(geometry, material);
+  };
+
+  Object.defineProperty(FullScreenQuad.prototype, 'material', {
+    get: function () {
+      return this._mesh.material;
+    },
+    set: function (value) {
+      this._mesh.material = value;
+    }
+  });
+  Object.assign(FullScreenQuad.prototype, {
+    render: function (renderer) {
+      renderer.render(this._mesh, camera);
+    }
+  });
+  return FullScreenQuad;
+}();
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js","../shaders/CopyShader.js":"../node_modules/three/examples/jsm/shaders/CopyShader.js","../postprocessing/ShaderPass.js":"../node_modules/three/examples/jsm/postprocessing/ShaderPass.js","../postprocessing/MaskPass.js":"../node_modules/three/examples/jsm/postprocessing/MaskPass.js"}],"../node_modules/three/examples/jsm/postprocessing/RenderPass.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.RenderPass = void 0;
+
+var _Pass = require("../postprocessing/Pass.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ */
+var RenderPass = function (scene, camera, overrideMaterial, clearColor, clearAlpha) {
+  _Pass.Pass.call(this);
+
+  this.scene = scene;
+  this.camera = camera;
+  this.overrideMaterial = overrideMaterial;
+  this.clearColor = clearColor;
+  this.clearAlpha = clearAlpha !== undefined ? clearAlpha : 0;
+  this.clear = true;
+  this.clearDepth = false;
+  this.needsSwap = false;
+};
+
+exports.RenderPass = RenderPass;
+RenderPass.prototype = Object.assign(Object.create(_Pass.Pass.prototype), {
+  constructor: RenderPass,
+  render: function (renderer, writeBuffer, readBuffer
+  /*, deltaTime, maskActive */
+  ) {
+    var oldAutoClear = renderer.autoClear;
+    renderer.autoClear = false;
+    this.scene.overrideMaterial = this.overrideMaterial;
+    var oldClearColor, oldClearAlpha;
+
+    if (this.clearColor) {
+      oldClearColor = renderer.getClearColor().getHex();
+      oldClearAlpha = renderer.getClearAlpha();
+      renderer.setClearColor(this.clearColor, this.clearAlpha);
+    }
+
+    if (this.clearDepth) {
+      renderer.clearDepth();
+    }
+
+    renderer.setRenderTarget(this.renderToScreen ? null : readBuffer); // TODO: Avoid using autoClear properties, see https://github.com/mrdoob/three.js/pull/15571#issuecomment-465669600
+
+    if (this.clear) renderer.clear(renderer.autoClearColor, renderer.autoClearDepth, renderer.autoClearStencil);
+    renderer.render(this.scene, this.camera);
+
+    if (this.clearColor) {
+      renderer.setClearColor(oldClearColor, oldClearAlpha);
+    }
+
+    this.scene.overrideMaterial = null;
+    renderer.autoClear = oldAutoClear;
+  }
+});
+},{"../postprocessing/Pass.js":"../node_modules/three/examples/jsm/postprocessing/Pass.js"}],"../node_modules/three/examples/jsm/shaders/FilmShader.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.FilmShader = void 0;
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ *
+ * Film grain & scanlines shader
+ *
+ * - ported from HLSL to WebGL / GLSL
+ * http://www.truevision3d.com/forums/showcase/staticnoise_colorblackwhite_scanline_shaders-t18698.0.html
+ *
+ * Screen Space Static Postprocessor
+ *
+ * Produces an analogue noise overlay similar to a film grain / TV static
+ *
+ * Original implementation and noise algorithm
+ * Pat 'Hawthorne' Shearon
+ *
+ * Optimized scanlines + noise version with intensity scaling
+ * Georg 'Leviathan' Steinrohder
+ *
+ * This version is provided under a Creative Commons Attribution 3.0 License
+ * http://creativecommons.org/licenses/by/3.0/
+ */
+var FilmShader = {
+  uniforms: {
+    "tDiffuse": {
+      value: null
+    },
+    "time": {
+      value: 0.0
+    },
+    "nIntensity": {
+      value: 0.5
+    },
+    "sIntensity": {
+      value: 0.05
+    },
+    "sCount": {
+      value: 4096
+    },
+    "grayscale": {
+      value: 1
+    }
+  },
+  vertexShader: ["varying vec2 vUv;", "void main() {", "vUv = uv;", "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );", "}"].join("\n"),
+  fragmentShader: ["#include <common>", // control parameter
+  "uniform float time;", "uniform bool grayscale;", // noise effect intensity value (0 = no effect, 1 = full effect)
+  "uniform float nIntensity;", // scanlines effect intensity value (0 = no effect, 1 = full effect)
+  "uniform float sIntensity;", // scanlines effect count value (0 = no effect, 4096 = full effect)
+  "uniform float sCount;", "uniform sampler2D tDiffuse;", "varying vec2 vUv;", "void main() {", // sample the source
+  "vec4 cTextureScreen = texture2D( tDiffuse, vUv );", // make some noise
+  "float dx = rand( vUv + time );", // add noise
+  "vec3 cResult = cTextureScreen.rgb + cTextureScreen.rgb * clamp( 0.1 + dx, 0.0, 1.0 );", // get us a sine and cosine
+  "vec2 sc = vec2( sin( vUv.y * sCount ), cos( vUv.y * sCount ) );", // add scanlines
+  "cResult += cTextureScreen.rgb * vec3( sc.x, sc.y, sc.x ) * sIntensity;", // interpolate between source and result by intensity
+  "cResult = cTextureScreen.rgb + clamp( nIntensity, 0.0,1.0 ) * ( cResult - cTextureScreen.rgb );", // convert to grayscale if desired
+  "if( grayscale ) {", "cResult = vec3( cResult.r * 0.3 + cResult.g * 0.59 + cResult.b * 0.11 );", "}", "gl_FragColor =  vec4( cResult, cTextureScreen.a );", "}"].join("\n")
+};
+exports.FilmShader = FilmShader;
+},{}],"../node_modules/three/examples/jsm/postprocessing/FilmPass.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.FilmPass = void 0;
+
+var _threeModule = require("../../../build/three.module.js");
+
+var _Pass = require("../postprocessing/Pass.js");
+
+var _FilmShader = require("../shaders/FilmShader.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ */
+var FilmPass = function (noiseIntensity, scanlinesIntensity, scanlinesCount, grayscale) {
+  _Pass.Pass.call(this);
+
+  if (_FilmShader.FilmShader === undefined) console.error("FilmPass relies on FilmShader");
+  var shader = _FilmShader.FilmShader;
+  this.uniforms = _threeModule.UniformsUtils.clone(shader.uniforms);
+  this.material = new _threeModule.ShaderMaterial({
+    uniforms: this.uniforms,
+    vertexShader: shader.vertexShader,
+    fragmentShader: shader.fragmentShader
+  });
+  if (grayscale !== undefined) this.uniforms.grayscale.value = grayscale;
+  if (noiseIntensity !== undefined) this.uniforms.nIntensity.value = noiseIntensity;
+  if (scanlinesIntensity !== undefined) this.uniforms.sIntensity.value = scanlinesIntensity;
+  if (scanlinesCount !== undefined) this.uniforms.sCount.value = scanlinesCount;
+  this.fsQuad = new _Pass.Pass.FullScreenQuad(this.material);
+};
+
+exports.FilmPass = FilmPass;
+FilmPass.prototype = Object.assign(Object.create(_Pass.Pass.prototype), {
+  constructor: FilmPass,
+  render: function (renderer, writeBuffer, readBuffer, deltaTime
+  /*, maskActive */
+  ) {
+    this.uniforms["tDiffuse"].value = readBuffer.texture;
+    this.uniforms["time"].value += deltaTime;
+
+    if (this.renderToScreen) {
+      renderer.setRenderTarget(null);
+      this.fsQuad.render(renderer);
+    } else {
+      renderer.setRenderTarget(writeBuffer);
+      if (this.clear) renderer.clear();
+      this.fsQuad.render(renderer);
+    }
+  }
+});
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js","../postprocessing/Pass.js":"../node_modules/three/examples/jsm/postprocessing/Pass.js","../shaders/FilmShader.js":"../node_modules/three/examples/jsm/shaders/FilmShader.js"}],"../node_modules/three/examples/jsm/shaders/ConvolutionShader.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.ConvolutionShader = void 0;
+
+var _threeModule = require("../../../build/three.module.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ *
+ * Convolution shader
+ * ported from o3d sample to WebGL / GLSL
+ * http://o3d.googlecode.com/svn/trunk/samples/convolution.html
+ */
+var ConvolutionShader = {
+  defines: {
+    "KERNEL_SIZE_FLOAT": "25.0",
+    "KERNEL_SIZE_INT": "25"
+  },
+  uniforms: {
+    "tDiffuse": {
+      value: null
+    },
+    "uImageIncrement": {
+      value: new _threeModule.Vector2(0.001953125, 0.0)
+    },
+    "cKernel": {
+      value: []
+    }
+  },
+  vertexShader: ["uniform vec2 uImageIncrement;", "varying vec2 vUv;", "void main() {", "vUv = uv - ( ( KERNEL_SIZE_FLOAT - 1.0 ) / 2.0 ) * uImageIncrement;", "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );", "}"].join("\n"),
+  fragmentShader: ["uniform float cKernel[ KERNEL_SIZE_INT ];", "uniform sampler2D tDiffuse;", "uniform vec2 uImageIncrement;", "varying vec2 vUv;", "void main() {", "vec2 imageCoord = vUv;", "vec4 sum = vec4( 0.0, 0.0, 0.0, 0.0 );", "for( int i = 0; i < KERNEL_SIZE_INT; i ++ ) {", "sum += texture2D( tDiffuse, imageCoord ) * cKernel[ i ];", "imageCoord += uImageIncrement;", "}", "gl_FragColor = sum;", "}"].join("\n"),
+  buildKernel: function (sigma) {
+    // We lop off the sqrt(2 * pi) * sigma term, since we're going to normalize anyway.
+    function gauss(x, sigma) {
+      return Math.exp(-(x * x) / (2.0 * sigma * sigma));
+    }
+
+    var i,
+        values,
+        sum,
+        halfWidth,
+        kMaxKernelSize = 25,
+        kernelSize = 2 * Math.ceil(sigma * 3.0) + 1;
+    if (kernelSize > kMaxKernelSize) kernelSize = kMaxKernelSize;
+    halfWidth = (kernelSize - 1) * 0.5;
+    values = new Array(kernelSize);
+    sum = 0.0;
+
+    for (i = 0; i < kernelSize; ++i) {
+      values[i] = gauss(i - halfWidth, sigma);
+      sum += values[i];
+    } // normalize the kernel
+
+
+    for (i = 0; i < kernelSize; ++i) values[i] /= sum;
+
+    return values;
+  }
+};
+exports.ConvolutionShader = ConvolutionShader;
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js"}],"../node_modules/three/examples/jsm/postprocessing/BloomPass.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.BloomPass = void 0;
+
+var _threeModule = require("../../../build/three.module.js");
+
+var _Pass = require("../postprocessing/Pass.js");
+
+var _CopyShader = require("../shaders/CopyShader.js");
+
+var _ConvolutionShader = require("../shaders/ConvolutionShader.js");
+
+/**
+ * @author alteredq / http://alteredqualia.com/
+ */
+var BloomPass = function (strength, kernelSize, sigma, resolution) {
+  _Pass.Pass.call(this);
+
+  strength = strength !== undefined ? strength : 1;
+  kernelSize = kernelSize !== undefined ? kernelSize : 25;
+  sigma = sigma !== undefined ? sigma : 4.0;
+  resolution = resolution !== undefined ? resolution : 256; // render targets
+
+  var pars = {
+    minFilter: _threeModule.LinearFilter,
+    magFilter: _threeModule.LinearFilter,
+    format: _threeModule.RGBAFormat
+  };
+  this.renderTargetX = new _threeModule.WebGLRenderTarget(resolution, resolution, pars);
+  this.renderTargetX.texture.name = "BloomPass.x";
+  this.renderTargetY = new _threeModule.WebGLRenderTarget(resolution, resolution, pars);
+  this.renderTargetY.texture.name = "BloomPass.y"; // copy material
+
+  if (_CopyShader.CopyShader === undefined) console.error("BloomPass relies on CopyShader");
+  var copyShader = _CopyShader.CopyShader;
+  this.copyUniforms = _threeModule.UniformsUtils.clone(copyShader.uniforms);
+  this.copyUniforms["opacity"].value = strength;
+  this.materialCopy = new _threeModule.ShaderMaterial({
+    uniforms: this.copyUniforms,
+    vertexShader: copyShader.vertexShader,
+    fragmentShader: copyShader.fragmentShader,
+    blending: _threeModule.AdditiveBlending,
+    transparent: true
+  }); // convolution material
+
+  if (_ConvolutionShader.ConvolutionShader === undefined) console.error("BloomPass relies on ConvolutionShader");
+  var convolutionShader = _ConvolutionShader.ConvolutionShader;
+  this.convolutionUniforms = _threeModule.UniformsUtils.clone(convolutionShader.uniforms);
+  this.convolutionUniforms["uImageIncrement"].value = BloomPass.blurX;
+  this.convolutionUniforms["cKernel"].value = _ConvolutionShader.ConvolutionShader.buildKernel(sigma);
+  this.materialConvolution = new _threeModule.ShaderMaterial({
+    uniforms: this.convolutionUniforms,
+    vertexShader: convolutionShader.vertexShader,
+    fragmentShader: convolutionShader.fragmentShader,
+    defines: {
+      "KERNEL_SIZE_FLOAT": kernelSize.toFixed(1),
+      "KERNEL_SIZE_INT": kernelSize.toFixed(0)
+    }
+  });
+  this.needsSwap = false;
+  this.fsQuad = new _Pass.Pass.FullScreenQuad(null);
+};
+
+exports.BloomPass = BloomPass;
+BloomPass.prototype = Object.assign(Object.create(_Pass.Pass.prototype), {
+  constructor: BloomPass,
+  render: function (renderer, writeBuffer, readBuffer, deltaTime, maskActive) {
+    if (maskActive) renderer.state.buffers.stencil.setTest(false); // Render quad with blured scene into texture (convolution pass 1)
+
+    this.fsQuad.material = this.materialConvolution;
+    this.convolutionUniforms["tDiffuse"].value = readBuffer.texture;
+    this.convolutionUniforms["uImageIncrement"].value = BloomPass.blurX;
+    renderer.setRenderTarget(this.renderTargetX);
+    renderer.clear();
+    this.fsQuad.render(renderer); // Render quad with blured scene into texture (convolution pass 2)
+
+    this.convolutionUniforms["tDiffuse"].value = this.renderTargetX.texture;
+    this.convolutionUniforms["uImageIncrement"].value = BloomPass.blurY;
+    renderer.setRenderTarget(this.renderTargetY);
+    renderer.clear();
+    this.fsQuad.render(renderer); // Render original scene with superimposed blur to texture
+
+    this.fsQuad.material = this.materialCopy;
+    this.copyUniforms["tDiffuse"].value = this.renderTargetY.texture;
+    if (maskActive) renderer.state.buffers.stencil.setTest(true);
+    renderer.setRenderTarget(readBuffer);
+    if (this.clear) renderer.clear();
+    this.fsQuad.render(renderer);
+  }
+});
+BloomPass.blurX = new _threeModule.Vector2(0.001953125, 0.0);
+BloomPass.blurY = new _threeModule.Vector2(0.0, 0.001953125);
+},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js","../postprocessing/Pass.js":"../node_modules/three/examples/jsm/postprocessing/Pass.js","../shaders/CopyShader.js":"../node_modules/three/examples/jsm/shaders/CopyShader.js","../shaders/ConvolutionShader.js":"../node_modules/three/examples/jsm/shaders/ConvolutionShader.js"}],"../node_modules/inherits/inherits_browser.js":[function(require,module,exports) {
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -36586,807 +38161,153 @@ Engine.prototype.tick = function() {
     this.emit('tick', dt)
     this.last = time
 }
-},{"inherits":"../node_modules/inherits/inherits_browser.js","events":"../node_modules/node-libs-browser/node_modules/events/events.js","right-now":"../node_modules/right-now/browser.js","raf":"../node_modules/raf/index.js"}],"../node_modules/three/examples/jsm/controls/OrbitControls.js":[function(require,module,exports) {
+},{"inherits":"../node_modules/inherits/inherits_browser.js","events":"../node_modules/node-libs-browser/node_modules/events/events.js","right-now":"../node_modules/right-now/browser.js","raf":"../node_modules/raf/index.js"}],"js/utils/utils.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.MapControls = exports.OrbitControls = void 0;
+exports.getClosestColour = exports.getInterpolatedColours = exports.getPointFromAngleRadius = exports.colourInterpolate = exports.colorToString = exports.color = exports.shuffle = exports.clamp = exports.distance = exports.mapRange = exports.randomBetween = exports.interpolate = exports.trackMouse = void 0;
 
-var _threeModule = require("../../../build/three.module.js");
+var trackMouse = function trackMouse() {
+  window.mouseX = 0;
+  window.mouseY = 0;
+  document.getElementById('canvas').addEventListener('mousemove', function (e) {
+    window.mouseX = e.x - e.target.offsetLeft;
+    window.mouseY = e.y - e.target.offsetTop;
+  });
+};
 
+exports.trackMouse = trackMouse;
+
+var interpolate = function interpolate(t, n1, n2) {
+  return (n2 - n1) * t + n1;
+};
+
+exports.interpolate = interpolate;
+
+var randomBetween = function randomBetween(min, max) {
+  return (max - min) * Math.random() + min;
+};
+
+exports.randomBetween = randomBetween;
+
+var mapRange = function mapRange(v, r1l, r1u, r2l, r2u) {
+  return r2l + (r2u - r2l) * (v - r1l) / (r1u - r1l);
+};
+
+exports.mapRange = mapRange;
+
+var distance = function distance(x1, y1, x2, y2) {
+  var a = x1 - x2;
+  var b = y1 - y2;
+  return Math.sqrt(a * a + b * b);
+};
+
+exports.distance = distance;
+
+var clamp = function clamp(value, max) {
+  var min = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+  return Math.min(Math.max(value, min), max);
+};
+
+exports.clamp = clamp;
+
+var shuffle = function shuffle(array) {
+  var _arr = array.slice();
+
+  for (var i = _arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var _ref = [_arr[j], _arr[i]];
+    _arr[i] = _ref[0];
+    _arr[j] = _ref[1];
+  }
+
+  return _arr;
+};
+
+exports.shuffle = shuffle;
+
+var color = function color(r, g, b) {
+  return {
+    r: r,
+    g: g,
+    b: b
+  };
+};
+
+exports.color = color;
+
+var colorToString = function colorToString(_ref2) {
+  var r = _ref2.r,
+      g = _ref2.g,
+      b = _ref2.b;
+  return "rgb(".concat(r, ", ").concat(g, ", ").concat(b, ")");
+};
+
+exports.colorToString = colorToString;
+
+var colourInterpolate = function colourInterpolate(t, color1, color2) {
+  return color(interpolate(t, color1.r, color2.r), interpolate(t, color1.g, color2.g), interpolate(t, color1.b, color2.b));
+};
+
+exports.colourInterpolate = colourInterpolate;
+
+var getPointFromAngleRadius = function getPointFromAngleRadius(angle, radius) {
+  var x = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+  var y = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+  return {
+    x: x + Math.cos(angle) * radius,
+    y: y + Math.sin(angle) * radius
+  };
+};
 /**
- * @author qiao / https://github.com/qiao
- * @author mrdoob / http://mrdoob.com
- * @author alteredq / http://alteredqualia.com/
- * @author WestLangley / http://github.com/WestLangley
- * @author erich666 / http://erichaines.com
- * @author ScieCode / http://github.com/sciecode
+ * Creates an array of stepped colours through an array of colours
+ *
+ * @param {Array.<{ r: number, g: number, b: number }>} colours
+ * @param {number} granularity
+ *
+ * @returns {Array.<{ r: number, g: number, b: number }>}
  */
-// This set of controls performs orbiting, dollying (zooming), and panning.
-// Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
-//
-//    Orbit - left mouse / touch: one-finger move
-//    Zoom - middle mouse, or mousewheel / touch: two-finger spread or squish
-//    Pan - right mouse, or left mouse + ctrl/meta/shiftKey, or arrow keys / touch: two-finger move
-var OrbitControls = function (object, domElement) {
-  this.object = object;
-  this.domElement = domElement !== undefined ? domElement : document; // Set to false to disable this control
-
-  this.enabled = true; // "target" sets the location of focus, where the object orbits around
-
-  this.target = new _threeModule.Vector3(); // How far you can dolly in and out ( PerspectiveCamera only )
-
-  this.minDistance = 0;
-  this.maxDistance = Infinity; // How far you can zoom in and out ( OrthographicCamera only )
-
-  this.minZoom = 0;
-  this.maxZoom = Infinity; // How far you can orbit vertically, upper and lower limits.
-  // Range is 0 to Math.PI radians.
-
-  this.minPolarAngle = 0; // radians
-
-  this.maxPolarAngle = Math.PI; // radians
-  // How far you can orbit horizontally, upper and lower limits.
-  // If set, must be a sub-interval of the interval [ - Math.PI, Math.PI ].
-
-  this.minAzimuthAngle = -Infinity; // radians
-
-  this.maxAzimuthAngle = Infinity; // radians
-  // Set to true to enable damping (inertia)
-  // If damping is enabled, you must call controls.update() in your animation loop
-
-  this.enableDamping = false;
-  this.dampingFactor = 0.05; // This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
-  // Set to false to disable zooming
-
-  this.enableZoom = true;
-  this.zoomSpeed = 1.0; // Set to false to disable rotating
-
-  this.enableRotate = true;
-  this.rotateSpeed = 1.0; // Set to false to disable panning
-
-  this.enablePan = true;
-  this.panSpeed = 1.0;
-  this.screenSpacePanning = false; // if true, pan in screen-space
-
-  this.keyPanSpeed = 7.0; // pixels moved per arrow key push
-  // Set to true to automatically rotate around the target
-  // If auto-rotate is enabled, you must call controls.update() in your animation loop
-
-  this.autoRotate = false;
-  this.autoRotateSpeed = 2.0; // 30 seconds per round when fps is 60
-  // Set to false to disable use of the keys
-
-  this.enableKeys = true; // The four arrow keys
-
-  this.keys = {
-    LEFT: 37,
-    UP: 38,
-    RIGHT: 39,
-    BOTTOM: 40
-  }; // Mouse buttons
-
-  this.mouseButtons = {
-    LEFT: _threeModule.MOUSE.ROTATE,
-    MIDDLE: _threeModule.MOUSE.DOLLY,
-    RIGHT: _threeModule.MOUSE.PAN
-  }; // Touch fingers
-
-  this.touches = {
-    ONE: _threeModule.TOUCH.ROTATE,
-    TWO: _threeModule.TOUCH.DOLLY_PAN
-  }; // for reset
-
-  this.target0 = this.target.clone();
-  this.position0 = this.object.position.clone();
-  this.zoom0 = this.object.zoom; //
-  // public methods
-  //
-
-  this.getPolarAngle = function () {
-    return spherical.phi;
-  };
-
-  this.getAzimuthalAngle = function () {
-    return spherical.theta;
-  };
-
-  this.saveState = function () {
-    scope.target0.copy(scope.target);
-    scope.position0.copy(scope.object.position);
-    scope.zoom0 = scope.object.zoom;
-  };
-
-  this.reset = function () {
-    scope.target.copy(scope.target0);
-    scope.object.position.copy(scope.position0);
-    scope.object.zoom = scope.zoom0;
-    scope.object.updateProjectionMatrix();
-    scope.dispatchEvent(changeEvent);
-    scope.update();
-    state = STATE.NONE;
-  }; // this method is exposed, but perhaps it would be better if we can make it private...
 
 
-  this.update = function () {
-    var offset = new _threeModule.Vector3(); // so camera.up is the orbit axis
+exports.getPointFromAngleRadius = getPointFromAngleRadius;
 
-    var quat = new _threeModule.Quaternion().setFromUnitVectors(object.up, new _threeModule.Vector3(0, 1, 0));
-    var quatInverse = quat.clone().inverse();
-    var lastPosition = new _threeModule.Vector3();
-    var lastQuaternion = new _threeModule.Quaternion();
-    return function update() {
-      var position = scope.object.position;
-      offset.copy(position).sub(scope.target); // rotate offset to "y-axis-is-up" space
+var getInterpolatedColours = function getInterpolatedColours() {
+  var colours = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+  var granularity = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 100;
+  var colourStop = 1 / (colours.length - 1);
+  var granularityStop = 1 / granularity;
+  var colourArr = [];
 
-      offset.applyQuaternion(quat); // angle from z-axis around y-axis
-
-      spherical.setFromVector3(offset);
-
-      if (scope.autoRotate && state === STATE.NONE) {
-        rotateLeft(getAutoRotationAngle());
-      }
-
-      if (scope.enableDamping) {
-        spherical.theta += sphericalDelta.theta * scope.dampingFactor;
-        spherical.phi += sphericalDelta.phi * scope.dampingFactor;
-      } else {
-        spherical.theta += sphericalDelta.theta;
-        spherical.phi += sphericalDelta.phi;
-      } // restrict theta to be between desired limits
-
-
-      spherical.theta = Math.max(scope.minAzimuthAngle, Math.min(scope.maxAzimuthAngle, spherical.theta)); // restrict phi to be between desired limits
-
-      spherical.phi = Math.max(scope.minPolarAngle, Math.min(scope.maxPolarAngle, spherical.phi));
-      spherical.makeSafe();
-      spherical.radius *= scale; // restrict radius to be between desired limits
-
-      spherical.radius = Math.max(scope.minDistance, Math.min(scope.maxDistance, spherical.radius)); // move target to panned location
-
-      if (scope.enableDamping === true) {
-        scope.target.addScaledVector(panOffset, scope.dampingFactor);
-      } else {
-        scope.target.add(panOffset);
-      }
-
-      offset.setFromSpherical(spherical); // rotate offset back to "camera-up-vector-is-up" space
-
-      offset.applyQuaternion(quatInverse);
-      position.copy(scope.target).add(offset);
-      scope.object.lookAt(scope.target);
-
-      if (scope.enableDamping === true) {
-        sphericalDelta.theta *= 1 - scope.dampingFactor;
-        sphericalDelta.phi *= 1 - scope.dampingFactor;
-        panOffset.multiplyScalar(1 - scope.dampingFactor);
-      } else {
-        sphericalDelta.set(0, 0, 0);
-        panOffset.set(0, 0, 0);
-      }
-
-      scale = 1; // update condition is:
-      // min(camera displacement, camera rotation in radians)^2 > EPS
-      // using small-angle approximation cos(x/2) = 1 - x^2 / 8
-
-      if (zoomChanged || lastPosition.distanceToSquared(scope.object.position) > EPS || 8 * (1 - lastQuaternion.dot(scope.object.quaternion)) > EPS) {
-        scope.dispatchEvent(changeEvent);
-        lastPosition.copy(scope.object.position);
-        lastQuaternion.copy(scope.object.quaternion);
-        zoomChanged = false;
-        return true;
-      }
-
-      return false;
-    };
-  }();
-
-  this.dispose = function () {
-    scope.domElement.removeEventListener('contextmenu', onContextMenu, false);
-    scope.domElement.removeEventListener('mousedown', onMouseDown, false);
-    scope.domElement.removeEventListener('wheel', onMouseWheel, false);
-    scope.domElement.removeEventListener('touchstart', onTouchStart, false);
-    scope.domElement.removeEventListener('touchend', onTouchEnd, false);
-    scope.domElement.removeEventListener('touchmove', onTouchMove, false);
-    document.removeEventListener('mousemove', onMouseMove, false);
-    document.removeEventListener('mouseup', onMouseUp, false);
-    window.removeEventListener('keydown', onKeyDown, false); //scope.dispatchEvent( { type: 'dispose' } ); // should this be added here?
-  }; //
-  // internals
-  //
-
-
-  var scope = this;
-  var changeEvent = {
-    type: 'change'
-  };
-  var startEvent = {
-    type: 'start'
-  };
-  var endEvent = {
-    type: 'end'
-  };
-  var STATE = {
-    NONE: -1,
-    ROTATE: 0,
-    DOLLY: 1,
-    PAN: 2,
-    TOUCH_ROTATE: 3,
-    TOUCH_PAN: 4,
-    TOUCH_DOLLY_PAN: 5,
-    TOUCH_DOLLY_ROTATE: 6
-  };
-  var state = STATE.NONE;
-  var EPS = 0.000001; // current position in spherical coordinates
-
-  var spherical = new _threeModule.Spherical();
-  var sphericalDelta = new _threeModule.Spherical();
-  var scale = 1;
-  var panOffset = new _threeModule.Vector3();
-  var zoomChanged = false;
-  var rotateStart = new _threeModule.Vector2();
-  var rotateEnd = new _threeModule.Vector2();
-  var rotateDelta = new _threeModule.Vector2();
-  var panStart = new _threeModule.Vector2();
-  var panEnd = new _threeModule.Vector2();
-  var panDelta = new _threeModule.Vector2();
-  var dollyStart = new _threeModule.Vector2();
-  var dollyEnd = new _threeModule.Vector2();
-  var dollyDelta = new _threeModule.Vector2();
-
-  function getAutoRotationAngle() {
-    return 2 * Math.PI / 60 / 60 * scope.autoRotateSpeed;
+  for (var i = 0; i <= 1; i += granularityStop) {
+    var t = i % colourStop / colourStop;
+    var currColourIdx = Math.floor(i / colourStop);
+    colourArr.push(colourInterpolate(t, colours[currColourIdx], colours[currColourIdx + 1]));
   }
 
-  function getZoomScale() {
-    return Math.pow(0.95, scope.zoomSpeed);
-  }
-
-  function rotateLeft(angle) {
-    sphericalDelta.theta -= angle;
-  }
-
-  function rotateUp(angle) {
-    sphericalDelta.phi -= angle;
-  }
-
-  var panLeft = function () {
-    var v = new _threeModule.Vector3();
-    return function panLeft(distance, objectMatrix) {
-      v.setFromMatrixColumn(objectMatrix, 0); // get X column of objectMatrix
-
-      v.multiplyScalar(-distance);
-      panOffset.add(v);
-    };
-  }();
-
-  var panUp = function () {
-    var v = new _threeModule.Vector3();
-    return function panUp(distance, objectMatrix) {
-      if (scope.screenSpacePanning === true) {
-        v.setFromMatrixColumn(objectMatrix, 1);
-      } else {
-        v.setFromMatrixColumn(objectMatrix, 0);
-        v.crossVectors(scope.object.up, v);
-      }
-
-      v.multiplyScalar(distance);
-      panOffset.add(v);
-    };
-  }(); // deltaX and deltaY are in pixels; right and down are positive
-
-
-  var pan = function () {
-    var offset = new _threeModule.Vector3();
-    return function pan(deltaX, deltaY) {
-      var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
-
-      if (scope.object.isPerspectiveCamera) {
-        // perspective
-        var position = scope.object.position;
-        offset.copy(position).sub(scope.target);
-        var targetDistance = offset.length(); // half of the fov is center to top of screen
-
-        targetDistance *= Math.tan(scope.object.fov / 2 * Math.PI / 180.0); // we use only clientHeight here so aspect ratio does not distort speed
-
-        panLeft(2 * deltaX * targetDistance / element.clientHeight, scope.object.matrix);
-        panUp(2 * deltaY * targetDistance / element.clientHeight, scope.object.matrix);
-      } else if (scope.object.isOrthographicCamera) {
-        // orthographic
-        panLeft(deltaX * (scope.object.right - scope.object.left) / scope.object.zoom / element.clientWidth, scope.object.matrix);
-        panUp(deltaY * (scope.object.top - scope.object.bottom) / scope.object.zoom / element.clientHeight, scope.object.matrix);
-      } else {
-        // camera neither orthographic nor perspective
-        console.warn('WARNING: OrbitControls.js encountered an unknown camera type - pan disabled.');
-        scope.enablePan = false;
-      }
-    };
-  }();
-
-  function dollyIn(dollyScale) {
-    if (scope.object.isPerspectiveCamera) {
-      scale /= dollyScale;
-    } else if (scope.object.isOrthographicCamera) {
-      scope.object.zoom = Math.max(scope.minZoom, Math.min(scope.maxZoom, scope.object.zoom * dollyScale));
-      scope.object.updateProjectionMatrix();
-      zoomChanged = true;
-    } else {
-      console.warn('WARNING: OrbitControls.js encountered an unknown camera type - dolly/zoom disabled.');
-      scope.enableZoom = false;
-    }
-  }
-
-  function dollyOut(dollyScale) {
-    if (scope.object.isPerspectiveCamera) {
-      scale *= dollyScale;
-    } else if (scope.object.isOrthographicCamera) {
-      scope.object.zoom = Math.max(scope.minZoom, Math.min(scope.maxZoom, scope.object.zoom / dollyScale));
-      scope.object.updateProjectionMatrix();
-      zoomChanged = true;
-    } else {
-      console.warn('WARNING: OrbitControls.js encountered an unknown camera type - dolly/zoom disabled.');
-      scope.enableZoom = false;
-    }
-  } //
-  // event callbacks - update the object state
-  //
-
-
-  function handleMouseDownRotate(event) {
-    rotateStart.set(event.clientX, event.clientY);
-  }
-
-  function handleMouseDownDolly(event) {
-    dollyStart.set(event.clientX, event.clientY);
-  }
-
-  function handleMouseDownPan(event) {
-    panStart.set(event.clientX, event.clientY);
-  }
-
-  function handleMouseMoveRotate(event) {
-    rotateEnd.set(event.clientX, event.clientY);
-    rotateDelta.subVectors(rotateEnd, rotateStart).multiplyScalar(scope.rotateSpeed);
-    var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
-    rotateLeft(2 * Math.PI * rotateDelta.x / element.clientHeight); // yes, height
-
-    rotateUp(2 * Math.PI * rotateDelta.y / element.clientHeight);
-    rotateStart.copy(rotateEnd);
-    scope.update();
-  }
-
-  function handleMouseMoveDolly(event) {
-    dollyEnd.set(event.clientX, event.clientY);
-    dollyDelta.subVectors(dollyEnd, dollyStart);
-
-    if (dollyDelta.y > 0) {
-      dollyIn(getZoomScale());
-    } else if (dollyDelta.y < 0) {
-      dollyOut(getZoomScale());
-    }
-
-    dollyStart.copy(dollyEnd);
-    scope.update();
-  }
-
-  function handleMouseMovePan(event) {
-    panEnd.set(event.clientX, event.clientY);
-    panDelta.subVectors(panEnd, panStart).multiplyScalar(scope.panSpeed);
-    pan(panDelta.x, panDelta.y);
-    panStart.copy(panEnd);
-    scope.update();
-  }
-
-  function handleMouseUp()
-  /*event*/
-  {// no-op
-  }
-
-  function handleMouseWheel(event) {
-    if (event.deltaY < 0) {
-      dollyOut(getZoomScale());
-    } else if (event.deltaY > 0) {
-      dollyIn(getZoomScale());
-    }
-
-    scope.update();
-  }
-
-  function handleKeyDown(event) {
-    var needsUpdate = false;
-
-    switch (event.keyCode) {
-      case scope.keys.UP:
-        pan(0, scope.keyPanSpeed);
-        needsUpdate = true;
-        break;
-
-      case scope.keys.BOTTOM:
-        pan(0, -scope.keyPanSpeed);
-        needsUpdate = true;
-        break;
-
-      case scope.keys.LEFT:
-        pan(scope.keyPanSpeed, 0);
-        needsUpdate = true;
-        break;
-
-      case scope.keys.RIGHT:
-        pan(-scope.keyPanSpeed, 0);
-        needsUpdate = true;
-        break;
-    }
-
-    if (needsUpdate) {
-      // prevent the browser from scrolling on cursor keys
-      event.preventDefault();
-      scope.update();
-    }
-  }
-
-  function handleTouchStartRotate(event) {
-    if (event.touches.length == 1) {
-      rotateStart.set(event.touches[0].pageX, event.touches[0].pageY);
-    } else {
-      var x = 0.5 * (event.touches[0].pageX + event.touches[1].pageX);
-      var y = 0.5 * (event.touches[0].pageY + event.touches[1].pageY);
-      rotateStart.set(x, y);
-    }
-  }
-
-  function handleTouchStartPan(event) {
-    if (event.touches.length == 1) {
-      panStart.set(event.touches[0].pageX, event.touches[0].pageY);
-    } else {
-      var x = 0.5 * (event.touches[0].pageX + event.touches[1].pageX);
-      var y = 0.5 * (event.touches[0].pageY + event.touches[1].pageY);
-      panStart.set(x, y);
-    }
-  }
-
-  function handleTouchStartDolly(event) {
-    var dx = event.touches[0].pageX - event.touches[1].pageX;
-    var dy = event.touches[0].pageY - event.touches[1].pageY;
-    var distance = Math.sqrt(dx * dx + dy * dy);
-    dollyStart.set(0, distance);
-  }
-
-  function handleTouchStartDollyPan(event) {
-    if (scope.enableZoom) handleTouchStartDolly(event);
-    if (scope.enablePan) handleTouchStartPan(event);
-  }
-
-  function handleTouchStartDollyRotate(event) {
-    if (scope.enableZoom) handleTouchStartDolly(event);
-    if (scope.enableRotate) handleTouchStartRotate(event);
-  }
-
-  function handleTouchMoveRotate(event) {
-    if (event.touches.length == 1) {
-      rotateEnd.set(event.touches[0].pageX, event.touches[0].pageY);
-    } else {
-      var x = 0.5 * (event.touches[0].pageX + event.touches[1].pageX);
-      var y = 0.5 * (event.touches[0].pageY + event.touches[1].pageY);
-      rotateEnd.set(x, y);
-    }
-
-    rotateDelta.subVectors(rotateEnd, rotateStart).multiplyScalar(scope.rotateSpeed);
-    var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
-    rotateLeft(2 * Math.PI * rotateDelta.x / element.clientHeight); // yes, height
-
-    rotateUp(2 * Math.PI * rotateDelta.y / element.clientHeight);
-    rotateStart.copy(rotateEnd);
-  }
-
-  function handleTouchMovePan(event) {
-    if (event.touches.length == 1) {
-      panEnd.set(event.touches[0].pageX, event.touches[0].pageY);
-    } else {
-      var x = 0.5 * (event.touches[0].pageX + event.touches[1].pageX);
-      var y = 0.5 * (event.touches[0].pageY + event.touches[1].pageY);
-      panEnd.set(x, y);
-    }
-
-    panDelta.subVectors(panEnd, panStart).multiplyScalar(scope.panSpeed);
-    pan(panDelta.x, panDelta.y);
-    panStart.copy(panEnd);
-  }
-
-  function handleTouchMoveDolly(event) {
-    var dx = event.touches[0].pageX - event.touches[1].pageX;
-    var dy = event.touches[0].pageY - event.touches[1].pageY;
-    var distance = Math.sqrt(dx * dx + dy * dy);
-    dollyEnd.set(0, distance);
-    dollyDelta.set(0, Math.pow(dollyEnd.y / dollyStart.y, scope.zoomSpeed));
-    dollyIn(dollyDelta.y);
-    dollyStart.copy(dollyEnd);
-  }
-
-  function handleTouchMoveDollyPan(event) {
-    if (scope.enableZoom) handleTouchMoveDolly(event);
-    if (scope.enablePan) handleTouchMovePan(event);
-  }
-
-  function handleTouchMoveDollyRotate(event) {
-    if (scope.enableZoom) handleTouchMoveDolly(event);
-    if (scope.enableRotate) handleTouchMoveRotate(event);
-  }
-
-  function handleTouchEnd()
-  /*event*/
-  {} // no-op
-  //
-  // event handlers - FSM: listen for events and reset state
-  //
-
-
-  function onMouseDown(event) {
-    if (scope.enabled === false) return; // Prevent the browser from scrolling.
-
-    event.preventDefault(); // Manually set the focus since calling preventDefault above
-    // prevents the browser from setting it automatically.
-
-    scope.domElement.focus ? scope.domElement.focus() : window.focus();
-
-    switch (event.button) {
-      case 0:
-        switch (scope.mouseButtons.LEFT) {
-          case _threeModule.MOUSE.ROTATE:
-            if (event.ctrlKey || event.metaKey || event.shiftKey) {
-              if (scope.enablePan === false) return;
-              handleMouseDownPan(event);
-              state = STATE.PAN;
-            } else {
-              if (scope.enableRotate === false) return;
-              handleMouseDownRotate(event);
-              state = STATE.ROTATE;
-            }
-
-            break;
-
-          case _threeModule.MOUSE.PAN:
-            if (event.ctrlKey || event.metaKey || event.shiftKey) {
-              if (scope.enableRotate === false) return;
-              handleMouseDownRotate(event);
-              state = STATE.ROTATE;
-            } else {
-              if (scope.enablePan === false) return;
-              handleMouseDownPan(event);
-              state = STATE.PAN;
-            }
-
-            break;
-
-          default:
-            state = STATE.NONE;
-        }
-
-        break;
-
-      case 1:
-        switch (scope.mouseButtons.MIDDLE) {
-          case _threeModule.MOUSE.DOLLY:
-            if (scope.enableZoom === false) return;
-            handleMouseDownDolly(event);
-            state = STATE.DOLLY;
-            break;
-
-          default:
-            state = STATE.NONE;
-        }
-
-        break;
-
-      case 2:
-        switch (scope.mouseButtons.RIGHT) {
-          case _threeModule.MOUSE.ROTATE:
-            if (scope.enableRotate === false) return;
-            handleMouseDownRotate(event);
-            state = STATE.ROTATE;
-            break;
-
-          case _threeModule.MOUSE.PAN:
-            if (scope.enablePan === false) return;
-            handleMouseDownPan(event);
-            state = STATE.PAN;
-            break;
-
-          default:
-            state = STATE.NONE;
-        }
-
-        break;
-    }
-
-    if (state !== STATE.NONE) {
-      document.addEventListener('mousemove', onMouseMove, false);
-      document.addEventListener('mouseup', onMouseUp, false);
-      scope.dispatchEvent(startEvent);
-    }
-  }
-
-  function onMouseMove(event) {
-    if (scope.enabled === false) return;
-    event.preventDefault();
-
-    switch (state) {
-      case STATE.ROTATE:
-        if (scope.enableRotate === false) return;
-        handleMouseMoveRotate(event);
-        break;
-
-      case STATE.DOLLY:
-        if (scope.enableZoom === false) return;
-        handleMouseMoveDolly(event);
-        break;
-
-      case STATE.PAN:
-        if (scope.enablePan === false) return;
-        handleMouseMovePan(event);
-        break;
-    }
-  }
-
-  function onMouseUp(event) {
-    if (scope.enabled === false) return;
-    handleMouseUp(event);
-    document.removeEventListener('mousemove', onMouseMove, false);
-    document.removeEventListener('mouseup', onMouseUp, false);
-    scope.dispatchEvent(endEvent);
-    state = STATE.NONE;
-  }
-
-  function onMouseWheel(event) {
-    if (scope.enabled === false || scope.enableZoom === false || state !== STATE.NONE && state !== STATE.ROTATE) return;
-    event.preventDefault();
-    event.stopPropagation();
-    scope.dispatchEvent(startEvent);
-    handleMouseWheel(event);
-    scope.dispatchEvent(endEvent);
-  }
-
-  function onKeyDown(event) {
-    if (scope.enabled === false || scope.enableKeys === false || scope.enablePan === false) return;
-    handleKeyDown(event);
-  }
-
-  function onTouchStart(event) {
-    if (scope.enabled === false) return;
-    event.preventDefault();
-
-    switch (event.touches.length) {
-      case 1:
-        switch (scope.touches.ONE) {
-          case _threeModule.TOUCH.ROTATE:
-            if (scope.enableRotate === false) return;
-            handleTouchStartRotate(event);
-            state = STATE.TOUCH_ROTATE;
-            break;
-
-          case _threeModule.TOUCH.PAN:
-            if (scope.enablePan === false) return;
-            handleTouchStartPan(event);
-            state = STATE.TOUCH_PAN;
-            break;
-
-          default:
-            state = STATE.NONE;
-        }
-
-        break;
-
-      case 2:
-        switch (scope.touches.TWO) {
-          case _threeModule.TOUCH.DOLLY_PAN:
-            if (scope.enableZoom === false && scope.enablePan === false) return;
-            handleTouchStartDollyPan(event);
-            state = STATE.TOUCH_DOLLY_PAN;
-            break;
-
-          case _threeModule.TOUCH.DOLLY_ROTATE:
-            if (scope.enableZoom === false && scope.enableRotate === false) return;
-            handleTouchStartDollyRotate(event);
-            state = STATE.TOUCH_DOLLY_ROTATE;
-            break;
-
-          default:
-            state = STATE.NONE;
-        }
-
-        break;
-
-      default:
-        state = STATE.NONE;
-    }
-
-    if (state !== STATE.NONE) {
-      scope.dispatchEvent(startEvent);
-    }
-  }
-
-  function onTouchMove(event) {
-    if (scope.enabled === false) return;
-    event.preventDefault();
-    event.stopPropagation();
-
-    switch (state) {
-      case STATE.TOUCH_ROTATE:
-        if (scope.enableRotate === false) return;
-        handleTouchMoveRotate(event);
-        scope.update();
-        break;
-
-      case STATE.TOUCH_PAN:
-        if (scope.enablePan === false) return;
-        handleTouchMovePan(event);
-        scope.update();
-        break;
-
-      case STATE.TOUCH_DOLLY_PAN:
-        if (scope.enableZoom === false && scope.enablePan === false) return;
-        handleTouchMoveDollyPan(event);
-        scope.update();
-        break;
-
-      case STATE.TOUCH_DOLLY_ROTATE:
-        if (scope.enableZoom === false && scope.enableRotate === false) return;
-        handleTouchMoveDollyRotate(event);
-        scope.update();
-        break;
-
-      default:
-        state = STATE.NONE;
-    }
-  }
-
-  function onTouchEnd(event) {
-    if (scope.enabled === false) return;
-    handleTouchEnd(event);
-    scope.dispatchEvent(endEvent);
-    state = STATE.NONE;
-  }
-
-  function onContextMenu(event) {
-    if (scope.enabled === false) return;
-    event.preventDefault();
-  } //
-
-
-  scope.domElement.addEventListener('contextmenu', onContextMenu, false);
-  scope.domElement.addEventListener('mousedown', onMouseDown, false);
-  scope.domElement.addEventListener('wheel', onMouseWheel, false);
-  scope.domElement.addEventListener('touchstart', onTouchStart, false);
-  scope.domElement.addEventListener('touchend', onTouchEnd, false);
-  scope.domElement.addEventListener('touchmove', onTouchMove, false);
-  window.addEventListener('keydown', onKeyDown, false); // force an update at start
-
-  this.update();
+  return colourArr;
+};
+/**
+ * Finds what would be the most relevant colour
+ * in a colour array most likely created by
+ * getInterpolatedColours
+ *
+ * @param {number} t
+ * @param {Array.<{ r: number, g: number, b: number }>} colourArr
+ *
+ * @returns {{ r: number, g: number, b: number }}
+ */
+
+
+exports.getInterpolatedColours = getInterpolatedColours;
+
+var getClosestColour = function getClosestColour(t, colourArr) {
+  return colourArr[Math.round((colourArr.length - 1) * t)];
 };
 
-exports.OrbitControls = OrbitControls;
-OrbitControls.prototype = Object.create(_threeModule.EventDispatcher.prototype);
-OrbitControls.prototype.constructor = OrbitControls; // This set of controls performs orbiting, dollying (zooming), and panning.
-// Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
-// This is very similar to OrbitControls, another set of touch behavior
-//
-//    Orbit - right mouse, or left mouse + ctrl/meta/shiftKey / touch: two-finger rotate
-//    Zoom - middle mouse, or mousewheel / touch: two-finger spread or squish
-//    Pan - left mouse, or arrow keys / touch: one-finger move
-
-var MapControls = function (object, domElement) {
-  OrbitControls.call(this, object, domElement);
-  this.mouseButtons.LEFT = _threeModule.MOUSE.PAN;
-  this.mouseButtons.RIGHT = _threeModule.MOUSE.ROTATE;
-  this.touches.ONE = _threeModule.TOUCH.PAN;
-  this.touches.TWO = _threeModule.TOUCH.DOLLY_ROTATE;
-};
-
-exports.MapControls = MapControls;
-MapControls.prototype = Object.create(_threeModule.EventDispatcher.prototype);
-MapControls.prototype.constructor = MapControls;
-},{"../../../build/three.module.js":"../node_modules/three/build/three.module.js"}],"js/utils/engine3d.js":[function(require,module,exports) {
+exports.getClosestColour = getClosestColour;
+},{}],"js/utils/baseEngine.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -37396,9 +38317,7 @@ exports.default = void 0;
 
 var _rafLoop = _interopRequireDefault(require("raf-loop"));
 
-var _three = require("three");
-
-var _OrbitControls = require("three/examples/jsm/controls/OrbitControls");
+var _utils = require("./utils");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -37414,12 +38333,154 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
+var BaseEngine =
+/*#__PURE__*/
+function () {
+  function BaseEngine(defaultOptions, options) {
+    _classCallCheck(this, BaseEngine);
+
+    this.options = _objectSpread({}, defaultOptions, {}, options);
+    this.loop = (0, _rafLoop.default)(this.update.bind(this));
+    this.frame = 0;
+    this.windowWidth = window.innerWidth;
+
+    this._renderer = function () {};
+  }
+
+  _createClass(BaseEngine, [{
+    key: "_addEventListeners",
+    value: function _addEventListeners() {
+      var _this = this;
+
+      this.wrapper.addEventListener('click', function () {
+        _this.options.debug = !_this.options.debug;
+        document.body.classList.toggle('debug', _this.options.debug);
+      }, false);
+      this.resizeTimer = setTimeout(function () {});
+      window.addEventListener('resize', function (e) {
+        clearTimeout(_this.resizeTimer);
+        _this.resizeTimer = setTimeout(function () {
+          _this.windowWidth = window.innerWidth;
+
+          _this.updateDimensions(_this.options.width, _this.options.height, _this.options.pixelRatio, _this.options.pixelate);
+        }, 150);
+      });
+    }
+  }, {
+    key: "_removeLoading",
+    value: function _removeLoading() {
+      var loading = document.getElementById('loading');
+      loading.parentElement.removeChild(loading);
+    }
+  }, {
+    key: "updateDimensions",
+    value: function updateDimensions(width, height, pixelRatio) {
+      var pixelate = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
+      this.wrapper.style.width = "".concat(width * pixelate, "px");
+      this.wrapper.style.height = "".concat(height * pixelate, "px");
+      this.wrapper.style.transform = "scale(".concat((0, _utils.clamp)(this.windowWidth / width, 1), ")");
+
+      if (this.canvasEl) {
+        this.canvasEl.width = width * pixelRatio;
+        this.canvasEl.height = height * pixelRatio;
+        this.canvasCtx.scale(pixelRatio, pixelRatio);
+      }
+
+      if (this.renderer) {
+        this.renderer.setSize(width, height);
+        this.renderer.setPixelRatio(pixelRatio);
+      }
+    }
+  }, {
+    key: "onRender",
+    value: function onRender() {
+      var fn = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+      this._renderer = fn;
+    }
+  }, {
+    key: "preload",
+    value: function preload() {
+      var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+      return new Promise(function (resolve, reject) {
+        cb(resolve);
+      });
+    }
+  }, {
+    key: "start",
+    value: function start() {
+      this._addEventListeners();
+
+      this._removeLoading();
+
+      this.loop.start();
+    }
+  }, {
+    key: "stop",
+    value: function stop() {
+      this.loop.stop();
+    }
+  }]);
+
+  return BaseEngine;
+}();
+
+var _default = BaseEngine;
+exports.default = _default;
+},{"raf-loop":"../node_modules/raf-loop/index.js","./utils":"js/utils/utils.js"}],"js/utils/engine3d.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _three = require("three");
+
+var _OrbitControls = require("three/examples/jsm/controls/OrbitControls");
+
+var _EffectComposer = require("three/examples/jsm/postprocessing/EffectComposer");
+
+var _RenderPass = require("three/examples/jsm/postprocessing/RenderPass");
+
+var _FilmPass = require("three/examples/jsm/postprocessing/FilmPass");
+
+var _BloomPass = require("three/examples/jsm/postprocessing/BloomPass");
+
+var _baseEngine = _interopRequireDefault(require("./baseEngine"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(source, true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(source).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
 var DEFAULTS = {
   debug: false,
   width: 480,
   height: 480,
   pixelRatio: window.devicePixelRatio,
-  clickToggleDebug: true
+  clickToggleDebug: true,
+  postProcessing: false
 };
 var RENDERER_DEFAULTS = {
   alpha: false
@@ -37427,24 +38488,30 @@ var RENDERER_DEFAULTS = {
 
 var SketchEngine3D =
 /*#__PURE__*/
-function () {
+function (_BaseEngine) {
+  _inherits(SketchEngine3D, _BaseEngine);
+
   function SketchEngine3D(mountEl) {
+    var _this;
+
     var opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var rendererOpts = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
 
     _classCallCheck(this, SketchEngine3D);
 
-    this.options = _objectSpread({}, DEFAULTS, {}, opts);
-    this.rendererOptions = _objectSpread({}, RENDERER_DEFAULTS, {}, rendererOpts);
-    this.mountEl = mountEl;
-    this.scene = new _three.Scene();
-    this.renderer = new _three.WebGLRenderer(this.rendererOptions);
-    this.updateDimensions(this.options.width, this.options.height, this.options.pixelRatio);
-    this.mountEl.appendChild(this.renderer.domElement);
-    this.frame = 0;
-    this.loop = (0, _rafLoop.default)(this.update.bind(this));
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(SketchEngine3D).call(this, DEFAULTS, opts));
+    _this.rendererOptions = _objectSpread({}, RENDERER_DEFAULTS, {}, rendererOpts);
+    _this.mountEl = mountEl;
+    _this.scene = new _three.Scene();
+    _this.renderer = new _three.WebGLRenderer(_this.rendererOptions);
+    _this.renderer.shadowMap.enabled = true;
+    _this.renderer.shadowMap.type = _three.PCFSoftShadowMap;
 
-    this._renderer = function () {};
+    _this.mountEl.appendChild(_this.renderer.domElement);
+
+    _this.updateDimensions(_this.options.width, _this.options.height, _this.options.pixelRatio);
+
+    return _this;
   }
 
   _createClass(SketchEngine3D, [{
@@ -37456,7 +38523,9 @@ function () {
           _ref$autoRotate = _ref.autoRotate,
           autoRotate = _ref$autoRotate === void 0 ? false : _ref$autoRotate,
           _ref$enableZoom = _ref.enableZoom,
-          enableZoom = _ref$enableZoom === void 0 ? false : _ref$enableZoom;
+          enableZoom = _ref$enableZoom === void 0 ? false : _ref$enableZoom,
+          _ref$enabled = _ref.enabled,
+          enabled = _ref$enabled === void 0 ? true : _ref$enabled;
 
       this.camera = camera;
 
@@ -37464,38 +38533,34 @@ function () {
         this.orbit = new _OrbitControls.OrbitControls(this.camera, this.renderer.domElement);
         this.orbit.autoRotate = autoRotate;
         this.orbit.enableZoom = enableZoom;
+        this.orbit.enabled = enabled;
       } else {
         this.orbit = null;
       }
-    }
-  }, {
-    key: "_addEventListeners",
-    value: function _addEventListeners() {
-      var _this = this;
 
-      this.mountEl.addEventListener('click', function () {
-        _this.options.debug = !_this.options.debug;
-        document.body.classList.toggle('debug', _this.options.debug);
-      }, false);
+      if (this.options.postProcessing) {
+        this.addPostProcessing();
+      }
     }
   }, {
-    key: "updateDimensions",
-    value: function updateDimensions(width, height, pixelRatio) {
-      this.mountEl.style.width = "".concat(width, "px");
-      this.mountEl.style.height = "".concat(height, "px");
-      this.renderer.setSize(width, height);
-      this.renderer.setPixelRatio(pixelRatio);
-    }
-  }, {
-    key: "onRender",
-    value: function onRender() {
-      var fn = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-      this._renderer = fn;
-    }
-  }, {
-    key: "start",
-    value: function start() {
-      this.loop.start();
+    key: "addPostProcessing",
+    value: function addPostProcessing() {
+      this.composer = new _EffectComposer.EffectComposer(this.renderer);
+      this.renderScene = new _RenderPass.RenderPass(this.scene, this.camera);
+      this.composer.addPass(this.renderScene); // this.bloomPass = new BloomPass(
+      //   5,    // strength
+      //   12,   // kernel size
+      //   20,    // sigma ?
+      //   5,  // blur render target resolution
+      // );
+      // this.composer.addPass(this.bloomPass);
+      // this.filmPass = new FilmPass(
+      //   1,   // noise intensity
+      //   0.5,  // scanline intensity
+      //   1000,    // scanline count
+      //   false,  // grayscale
+      // );
+      // this.composer.addPass(this.filmPass);
     }
   }, {
     key: "update",
@@ -37517,22 +38582,57 @@ function () {
         this.orbit.update();
       }
 
-      this.renderer.render(this.scene, this.camera);
+      if (this.options.postProcessing) {
+        this.composer.render();
+      } else {
+        this.renderer.render(this.scene, this.camera);
+      }
+
       this.frame++;
     }
   }, {
-    key: "stop",
-    value: function stop() {
-      this.loop.stop();
+    key: "wrapper",
+    get: function get() {
+      return this.mountEl;
+    }
+  }], [{
+    key: "ORTHOPGRAPHIC_CAMERA",
+    value: function ORTHOPGRAPHIC_CAMERA(width, height) {
+      var _ref2 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
+          _ref2$near = _ref2.near,
+          near = _ref2$near === void 0 ? 1 : _ref2$near,
+          _ref2$far = _ref2.far,
+          far = _ref2$far === void 0 ? 1000 : _ref2$far;
+
+      var camera = new _three.OrthographicCamera(width / -2, width / 2, height / 2, height / -2, near, far);
+      camera.position.z = 500;
+      camera.zoom = 2.5;
+      camera.updateProjectionMatrix();
+      return camera;
+    }
+  }, {
+    key: "PERSPECTIVE_CAMERA",
+    value: function PERSPECTIVE_CAMERA(width, height) {
+      var _ref3 = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
+          _ref3$fov = _ref3.fov,
+          fov = _ref3$fov === void 0 ? 45 : _ref3$fov,
+          _ref3$near = _ref3.near,
+          near = _ref3$near === void 0 ? 1 : _ref3$near,
+          _ref3$far = _ref3.far,
+          far = _ref3$far === void 0 ? 1000 : _ref3$far;
+
+      var camera = new _three.PerspectiveCamera(fov, width / height, near, far);
+      camera.position.z = 5;
+      return camera;
     }
   }]);
 
   return SketchEngine3D;
-}();
+}(_baseEngine.default);
 
 var _default = SketchEngine3D;
 exports.default = _default;
-},{"raf-loop":"../node_modules/raf-loop/index.js","three":"../node_modules/three/build/three.module.js","three/examples/jsm/controls/OrbitControls":"../node_modules/three/examples/jsm/controls/OrbitControls.js"}],"images/envMap/test-px.jpg":[function(require,module,exports) {
+},{"three":"../node_modules/three/build/three.module.js","three/examples/jsm/controls/OrbitControls":"../node_modules/three/examples/jsm/controls/OrbitControls.js","three/examples/jsm/postprocessing/EffectComposer":"../node_modules/three/examples/jsm/postprocessing/EffectComposer.js","three/examples/jsm/postprocessing/RenderPass":"../node_modules/three/examples/jsm/postprocessing/RenderPass.js","three/examples/jsm/postprocessing/FilmPass":"../node_modules/three/examples/jsm/postprocessing/FilmPass.js","three/examples/jsm/postprocessing/BloomPass":"../node_modules/three/examples/jsm/postprocessing/BloomPass.js","./baseEngine":"js/utils/baseEngine.js"}],"images/envMap/test-px.jpg":[function(require,module,exports) {
 module.exports = "/test-px.4e022215.jpg";
 },{}],"images/envMap/test-nx.jpg":[function(require,module,exports) {
 module.exports = "/test-nx.986e3b95.jpg";
@@ -37677,7 +38777,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "65112" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "63342" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
